@@ -1,0 +1,178 @@
+{
+  "header": {
+    "schema_version": 1,
+    "device_id": "water_001",
+    "device_type": "water_level",
+    "batch_id": "water_001_000001",
+    "sequence_start": 1,
+    "sequence_end": 10,
+    "record_count": 10,
+    "timestamp_start": "2026-10-03T00:00:00+00:00",
+    "timestamp_end": "2026-10-03T00:00:09+00:00",
+    "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "merkle_root": "7b0cece320d701003cb0eaeb2f3ec916a6e44043bcfae6db1380346b8e406cd5"
+  },
+  "records": [
+    {
+      "device_id": "water_001",
+      "device_type": "water_level",
+      "batch_id": "water_001_000001",
+      "sequence": 1,
+      "timestamp": "2026-10-03T00:00:00+00:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
+      "data": {
+        "value": "3.21",
+        "unit": "m",
+        "status": "normal"
+      },
+      "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "record_hash": "157e9ac58ecf2e4170955ca775008f101aa08936e626cd053d6284221ce40f8e"
+    },
+    {
+      "device_id": "water_001",
+      "device_type": "water_level",
+      "batch_id": "water_001_000001",
+      "sequence": 2,
+      "timestamp": "2026-10-03T00:00:01+00:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
+      "data": {
+        "value": "3.22",
+        "unit": "m",
+        "status": "normal"
+      },
+      "previous_hash": "157e9ac58ecf2e4170955ca775008f101aa08936e626cd053d6284221ce40f8e",
+      "record_hash": "b7bc9c4d155bb43e12af65607d659ab5d6bbb72d07e39679eebe9123a0d73db4"
+    },
+    {
+      "device_id": "water_001",
+      "device_type": "water_level",
+      "batch_id": "water_001_000001",
+      "sequence": 3,
+      "timestamp": "2026-10-03T00:00:02+00:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
+      "data": {
+        "value": "3.23",
+        "unit": "m",
+        "status": "normal"
+      },
+      "previous_hash": "b7bc9c4d155bb43e12af65607d659ab5d6bbb72d07e39679eebe9123a0d73db4",
+      "record_hash": "19ded44165dc20e00b594e09e7b9c8a28c19fcad5c4c34ce2d556ed55e52e632"
+    },
+    {
+      "device_id": "water_001",
+      "device_type": "water_level",
+      "batch_id": "water_001_000001",
+      "sequence": 4,
+      "timestamp": "2026-10-03T00:00:03+00:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
+      "data": {
+        "value": "3.24",
+        "unit": "m",
+        "status": "normal"
+      },
+      "previous_hash": "19ded44165dc20e00b594e09e7b9c8a28c19fcad5c4c34ce2d556ed55e52e632",
+      "record_hash": "f37f98871a0bdca48fa04ed6f3244ec52d8f49159d46154f63648fa6c7dbeee1"
+    },
+    {
+      "device_id": "water_001",
+      "device_type": "water_level",
+      "batch_id": "water_001_000001",
+      "sequence": 5,
+      "timestamp": "2026-10-03T00:00:04+00:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
+      "data": {
+        "value": "3.25",
+        "unit": "m",
+        "status": "normal"
+      },
+      "previous_hash": "f37f98871a0bdca48fa04ed6f3244ec52d8f49159d46154f63648fa6c7dbeee1",
+      "record_hash": "66ac0a0cf4c910cf4fe0109392b9f0dadd44a785e4be4d54b8cc2398e0cf26e5"
+    },
+    {
+      "device_id": "water_001",
+      "device_type": "water_level",
+      "batch_id": "water_001_000001",
+      "sequence": 6,
+      "timestamp": "2026-10-03T00:00:05+00:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
+      "data": {
+        "value": "3.26",
+        "unit": "m",
+        "status": "normal"
+      },
+      "previous_hash": "66ac0a0cf4c910cf4fe0109392b9f0dadd44a785e4be4d54b8cc2398e0cf26e5",
+      "record_hash": "1754cccfe79987f10237900c3f18eac2d9262af8d5dd125fdadf59fa02b6f8ca"
+    },
+    {
+      "device_id": "water_001",
+      "device_type": "water_level",
+      "batch_id": "water_001_000001",
+      "sequence": 7,
+      "timestamp": "2026-10-03T00:00:06+00:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
+      "data": {
+        "value": "3.27",
+        "unit": "m",
+        "status": "normal"
+      },
+      "previous_hash": "1754cccfe79987f10237900c3f18eac2d9262af8d5dd125fdadf59fa02b6f8ca",
+      "record_hash": "7773bcf64a61d4fe38639687852e47155c2824d4c03a9331bf12aaff110f3567"
+    },
+    {
+      "device_id": "water_001",
+      "device_type": "water_level",
+      "batch_id": "water_001_000001",
+      "sequence": 8,
+      "timestamp": "2026-10-03T00:00:07+00:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
+      "data": {
+        "value": "3.28",
+        "unit": "m",
+        "status": "normal"
+      },
+      "previous_hash": "7773bcf64a61d4fe38639687852e47155c2824d4c03a9331bf12aaff110f3567",
+      "record_hash": "0fd3ff690e5ce6c54f9ca5b06dd19354499f75ee03754c5cb4ea6cafcc996fd3"
+    },
+    {
+      "device_id": "water_001",
+      "device_type": "water_level",
+      "batch_id": "water_001_000001",
+      "sequence": 9,
+      "timestamp": "2026-10-03T00:00:08+00:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
+      "data": {
+        "value": "3.29",
+        "unit": "m",
+        "status": "normal"
+      },
+      "previous_hash": "0fd3ff690e5ce6c54f9ca5b06dd19354499f75ee03754c5cb4ea6cafcc996fd3",
+      "record_hash": "53fe57e80b17e4ef3c61903184a106cfd9fa925a78724ef13c6b3b90f5f02169"
+    },
+    {
+      "device_id": "water_001",
+      "device_type": "water_level",
+      "batch_id": "water_001_000001",
+      "sequence": 10,
+      "timestamp": "2026-10-03T00:00:09+00:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
+      "data": {
+        "value": "3.30",
+        "unit": "m",
+        "status": "normal"
+      },
+      "previous_hash": "53fe57e80b17e4ef3c61903184a106cfd9fa925a78724ef13c6b3b90f5f02169",
+      "record_hash": "225934f0adcb077907bb83f9f05f4bfd3a59f51c24d01fc664f3d89203886850"
+    }
+  ],
+  "signature": "e07a9accce7c303b9af995d483429cc283c58433046538a4635556b69afb4c3b69c9a5c3a53eeabac616d21cf4bd585ec63e5f16ebc409528883e6323edb7676"
+}

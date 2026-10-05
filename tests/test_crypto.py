@@ -69,3 +69,78 @@ def test_signed_header():
 def test_reject_nan():
     with pytest.raises(ValueError):
         canonical_bytes({"value": float("nan")})
+
+
+
+from datetime import datetime, timedelta, timezone
+
+from common_crypto.hash_chain import ZERO_HASH, record_hash
+from common_crypto.sm import generate_keypair, verify_message
+from device_simulator.batch import build_batch
+
+
+def test_build_batch():
+    private_key, public_key = generate_keypair()
+
+    records = []
+    previous = ZERO_HASH
+    start = datetime(
+        2026, 10, 5, 12, 0, 0,
+        tzinfo=timezone(timedelta(hours=8)),
+    )
+
+    for sequence in range(1, 11):
+        record = {
+            "version": 1,
+            "device_id": "WL-001",
+            "device_type": "water_level",
+            "timestamp": (
+                start + timedelta(seconds=sequence - 1)
+            ).isoformat(),
+            "longitude": "108.500000",
+            "latitude": "22.000000",
+            "sequence": sequence,
+            "batch_id": "WL-001-000001",
+            "payload": {
+                "water_level_m": "3.25",
+            },
+            "status": "normal",
+            "previous_hash": previous,
+        }
+
+        record["record_hash"] = record_hash(record)
+        records.append(record)
+        previous = record["record_hash"]
+
+    batch = build_batch(records, private_key, public_key)
+
+    assert set(batch) == {
+        "version", "device_id", "batch_id",
+        "start_sequence", "end_sequence", "count",
+        "start_time", "end_time", "merkle_root",
+        "records", "signature",
+    }
+    assert batch["count"] == 10
+    assert batch["start_sequence"] == 1
+    assert batch["end_sequence"] == 10
+
+    # 正常批次头的签名应通过
+    assert verify_message(
+        public_key,
+        canonical_bytes(signed_header(batch)),
+        batch["signature"],
+    )
+
+    # 修改签名覆盖的数量字段，原签名应失败
+    batch["count"] = 9
+    assert not verify_message(
+        public_key,
+        canonical_bytes(signed_header(batch)),
+        batch["signature"],
+    )
+
+    # 设备端发现记录被修改，应拒绝组批
+    records[3]["payload"]["water_level_m"] = "9.99"
+
+    with pytest.raises(ValueError, match="摘要链检查失败"):
+        build_batch(records, private_key, public_key)

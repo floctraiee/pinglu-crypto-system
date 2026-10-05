@@ -1,178 +1,174 @@
 {
-  "header": {
-    "schema_version": 1,
-    "device_id": "water_001",
-    "device_type": "water_level",
-    "batch_id": "water_001_000001",
-    "sequence_start": 1,
-    "sequence_end": 10,
-    "record_count": 10,
-    "timestamp_start": "2026-10-03T00:00:00+00:00",
-    "timestamp_end": "2026-10-03T00:00:09+00:00",
-    "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-    "merkle_root": "7b0cece320d701003cb0eaeb2f3ec916a6e44043bcfae6db1380346b8e406cd5"
-  },
+  "version": 1,
+  "device_id": "WL-001",
+  "batch_id": "WL-001-000001",
+  "start_sequence": 1,
+  "end_sequence": 10,
+  "count": 10,
+  "start_time": "2026-10-05T12:00:00+08:00",
+  "end_time": "2026-10-05T12:00:09+08:00",
+  "merkle_root": "a5d434d62b83b602eb3ecbc74238afa459ff673f73827fd5c5068715993f070c",
   "records": [
     {
-      "device_id": "water_001",
+      "version": 1,
+      "device_id": "WL-001",
       "device_type": "water_level",
-      "batch_id": "water_001_000001",
+      "timestamp": "2026-10-05T12:00:00+08:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
       "sequence": 1,
-      "timestamp": "2026-10-03T00:00:00+00:00",
-      "longitude": "108.500000",
-      "latitude": "22.000000",
-      "data": {
-        "value": "3.21",
-        "unit": "m",
-        "status": "normal"
+      "batch_id": "WL-001-000001",
+      "payload": {
+        "water_level_m": "3.21"
       },
+      "status": "normal",
       "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
-      "record_hash": "157e9ac58ecf2e4170955ca775008f101aa08936e626cd053d6284221ce40f8e"
+      "record_hash": "aa50559eba3e5a1939007d4911983e4100002a1ad210a3325e4792af5cf39894"
     },
     {
-      "device_id": "water_001",
+      "version": 1,
+      "device_id": "WL-001",
       "device_type": "water_level",
-      "batch_id": "water_001_000001",
+      "timestamp": "2026-10-05T12:00:01+08:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
       "sequence": 2,
-      "timestamp": "2026-10-03T00:00:01+00:00",
-      "longitude": "108.500000",
-      "latitude": "22.000000",
-      "data": {
-        "value": "3.22",
-        "unit": "m",
-        "status": "normal"
+      "batch_id": "WL-001-000001",
+      "payload": {
+        "water_level_m": "3.22"
       },
-      "previous_hash": "157e9ac58ecf2e4170955ca775008f101aa08936e626cd053d6284221ce40f8e",
-      "record_hash": "b7bc9c4d155bb43e12af65607d659ab5d6bbb72d07e39679eebe9123a0d73db4"
+      "status": "normal",
+      "previous_hash": "aa50559eba3e5a1939007d4911983e4100002a1ad210a3325e4792af5cf39894",
+      "record_hash": "156dbb91b641a546608453b19f6d5e59d16ea03d497375bcfc224ea27e0ab305"
     },
     {
-      "device_id": "water_001",
+      "version": 1,
+      "device_id": "WL-001",
       "device_type": "water_level",
-      "batch_id": "water_001_000001",
+      "timestamp": "2026-10-05T12:00:02+08:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
       "sequence": 3,
-      "timestamp": "2026-10-03T00:00:02+00:00",
-      "longitude": "108.500000",
-      "latitude": "22.000000",
-      "data": {
-        "value": "3.23",
-        "unit": "m",
-        "status": "normal"
+      "batch_id": "WL-001-000001",
+      "payload": {
+        "water_level_m": "3.23"
       },
-      "previous_hash": "b7bc9c4d155bb43e12af65607d659ab5d6bbb72d07e39679eebe9123a0d73db4",
-      "record_hash": "19ded44165dc20e00b594e09e7b9c8a28c19fcad5c4c34ce2d556ed55e52e632"
+      "status": "normal",
+      "previous_hash": "156dbb91b641a546608453b19f6d5e59d16ea03d497375bcfc224ea27e0ab305",
+      "record_hash": "6229e2766bedb53f0162a0cbca56297eb42e98a51aef9df74030412682a51bb6"
     },
     {
-      "device_id": "water_001",
+      "version": 1,
+      "device_id": "WL-001",
       "device_type": "water_level",
-      "batch_id": "water_001_000001",
+      "timestamp": "2026-10-05T12:00:03+08:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
       "sequence": 4,
-      "timestamp": "2026-10-03T00:00:03+00:00",
-      "longitude": "108.500000",
-      "latitude": "22.000000",
-      "data": {
-        "value": "3.24",
-        "unit": "m",
-        "status": "normal"
+      "batch_id": "WL-001-000001",
+      "payload": {
+        "water_level_m": "3.24"
       },
-      "previous_hash": "19ded44165dc20e00b594e09e7b9c8a28c19fcad5c4c34ce2d556ed55e52e632",
-      "record_hash": "f37f98871a0bdca48fa04ed6f3244ec52d8f49159d46154f63648fa6c7dbeee1"
+      "status": "normal",
+      "previous_hash": "6229e2766bedb53f0162a0cbca56297eb42e98a51aef9df74030412682a51bb6",
+      "record_hash": "90a17ffcf46db605be2372f78f7999e3b0c85c7de8cde0b2b65d83b3c9b3ce3f"
     },
     {
-      "device_id": "water_001",
+      "version": 1,
+      "device_id": "WL-001",
       "device_type": "water_level",
-      "batch_id": "water_001_000001",
+      "timestamp": "2026-10-05T12:00:04+08:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
       "sequence": 5,
-      "timestamp": "2026-10-03T00:00:04+00:00",
-      "longitude": "108.500000",
-      "latitude": "22.000000",
-      "data": {
-        "value": "3.25",
-        "unit": "m",
-        "status": "normal"
+      "batch_id": "WL-001-000001",
+      "payload": {
+        "water_level_m": "3.25"
       },
-      "previous_hash": "f37f98871a0bdca48fa04ed6f3244ec52d8f49159d46154f63648fa6c7dbeee1",
-      "record_hash": "66ac0a0cf4c910cf4fe0109392b9f0dadd44a785e4be4d54b8cc2398e0cf26e5"
+      "status": "normal",
+      "previous_hash": "90a17ffcf46db605be2372f78f7999e3b0c85c7de8cde0b2b65d83b3c9b3ce3f",
+      "record_hash": "0ce12c44cd8350321eb1873e268ecc66ce3dc3b691cbf53d5b224deff6e1643a"
     },
     {
-      "device_id": "water_001",
+      "version": 1,
+      "device_id": "WL-001",
       "device_type": "water_level",
-      "batch_id": "water_001_000001",
+      "timestamp": "2026-10-05T12:00:05+08:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
       "sequence": 6,
-      "timestamp": "2026-10-03T00:00:05+00:00",
-      "longitude": "108.500000",
-      "latitude": "22.000000",
-      "data": {
-        "value": "3.26",
-        "unit": "m",
-        "status": "normal"
+      "batch_id": "WL-001-000001",
+      "payload": {
+        "water_level_m": "3.26"
       },
-      "previous_hash": "66ac0a0cf4c910cf4fe0109392b9f0dadd44a785e4be4d54b8cc2398e0cf26e5",
-      "record_hash": "1754cccfe79987f10237900c3f18eac2d9262af8d5dd125fdadf59fa02b6f8ca"
+      "status": "normal",
+      "previous_hash": "0ce12c44cd8350321eb1873e268ecc66ce3dc3b691cbf53d5b224deff6e1643a",
+      "record_hash": "64568be408dfec9034f712399fef74349ed301fac2953e0640f054c8c60bb6b8"
     },
     {
-      "device_id": "water_001",
+      "version": 1,
+      "device_id": "WL-001",
       "device_type": "water_level",
-      "batch_id": "water_001_000001",
+      "timestamp": "2026-10-05T12:00:06+08:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
       "sequence": 7,
-      "timestamp": "2026-10-03T00:00:06+00:00",
-      "longitude": "108.500000",
-      "latitude": "22.000000",
-      "data": {
-        "value": "3.27",
-        "unit": "m",
-        "status": "normal"
+      "batch_id": "WL-001-000001",
+      "payload": {
+        "water_level_m": "3.27"
       },
-      "previous_hash": "1754cccfe79987f10237900c3f18eac2d9262af8d5dd125fdadf59fa02b6f8ca",
-      "record_hash": "7773bcf64a61d4fe38639687852e47155c2824d4c03a9331bf12aaff110f3567"
+      "status": "normal",
+      "previous_hash": "64568be408dfec9034f712399fef74349ed301fac2953e0640f054c8c60bb6b8",
+      "record_hash": "3da1b6d5a97a621e49240efa7f2992576719e921c00962ddfd416b2adfb81c41"
     },
     {
-      "device_id": "water_001",
+      "version": 1,
+      "device_id": "WL-001",
       "device_type": "water_level",
-      "batch_id": "water_001_000001",
+      "timestamp": "2026-10-05T12:00:07+08:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
       "sequence": 8,
-      "timestamp": "2026-10-03T00:00:07+00:00",
-      "longitude": "108.500000",
-      "latitude": "22.000000",
-      "data": {
-        "value": "3.28",
-        "unit": "m",
-        "status": "normal"
+      "batch_id": "WL-001-000001",
+      "payload": {
+        "water_level_m": "3.28"
       },
-      "previous_hash": "7773bcf64a61d4fe38639687852e47155c2824d4c03a9331bf12aaff110f3567",
-      "record_hash": "0fd3ff690e5ce6c54f9ca5b06dd19354499f75ee03754c5cb4ea6cafcc996fd3"
+      "status": "normal",
+      "previous_hash": "3da1b6d5a97a621e49240efa7f2992576719e921c00962ddfd416b2adfb81c41",
+      "record_hash": "09f3a8da0e96c931a35b4ee7c3f13798ef929b6fb361db27e969e69f096af312"
     },
     {
-      "device_id": "water_001",
+      "version": 1,
+      "device_id": "WL-001",
       "device_type": "water_level",
-      "batch_id": "water_001_000001",
+      "timestamp": "2026-10-05T12:00:08+08:00",
+      "longitude": "108.500000",
+      "latitude": "22.000000",
       "sequence": 9,
-      "timestamp": "2026-10-03T00:00:08+00:00",
-      "longitude": "108.500000",
-      "latitude": "22.000000",
-      "data": {
-        "value": "3.29",
-        "unit": "m",
-        "status": "normal"
+      "batch_id": "WL-001-000001",
+      "payload": {
+        "water_level_m": "3.29"
       },
-      "previous_hash": "0fd3ff690e5ce6c54f9ca5b06dd19354499f75ee03754c5cb4ea6cafcc996fd3",
-      "record_hash": "53fe57e80b17e4ef3c61903184a106cfd9fa925a78724ef13c6b3b90f5f02169"
+      "status": "normal",
+      "previous_hash": "09f3a8da0e96c931a35b4ee7c3f13798ef929b6fb361db27e969e69f096af312",
+      "record_hash": "60933b6050e7847c24194173a793ad3e3d3ea2ac7b9c19539457079405b2db67"
     },
     {
-      "device_id": "water_001",
+      "version": 1,
+      "device_id": "WL-001",
       "device_type": "water_level",
-      "batch_id": "water_001_000001",
-      "sequence": 10,
-      "timestamp": "2026-10-03T00:00:09+00:00",
+      "timestamp": "2026-10-05T12:00:09+08:00",
       "longitude": "108.500000",
       "latitude": "22.000000",
-      "data": {
-        "value": "3.30",
-        "unit": "m",
-        "status": "normal"
+      "sequence": 10,
+      "batch_id": "WL-001-000001",
+      "payload": {
+        "water_level_m": "3.30"
       },
-      "previous_hash": "53fe57e80b17e4ef3c61903184a106cfd9fa925a78724ef13c6b3b90f5f02169",
-      "record_hash": "225934f0adcb077907bb83f9f05f4bfd3a59f51c24d01fc664f3d89203886850"
+      "status": "normal",
+      "previous_hash": "60933b6050e7847c24194173a793ad3e3d3ea2ac7b9c19539457079405b2db67",
+      "record_hash": "871257ea337511f1c5e880ab0b144e8466cff6afcfbc3db02ef27cf735f1ccfa"
     }
   ],
-  "signature": "e07a9accce7c303b9af995d483429cc283c58433046538a4635556b69afb4c3b69c9a5c3a53eeabac616d21cf4bd585ec63e5f16ebc409528883e6323edb7676"
+  "signature": "b5de581e39a697fc7786fd28f746561625968e94a6894674e8800a58a21020561ffc56a0737c753ea95c323e12a27ec84ce9b9c594abf8c0df8a1e1e9c5fbae8"
 }

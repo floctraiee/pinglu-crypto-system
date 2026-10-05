@@ -1,7 +1,9 @@
 {
-  "water_001": {
-    "device_id": "water_001",
+  "WL-001": {
+    "device_id": "WL-001",
     "device_type": "water_level",
-    "public_key": "a323808e6d7ebd65d73b8ec32d5223b62e089a5b1bb5d15a705e543e48ccf136cd2b0789a18bd51d89aaa3195573c099dadddbde511cd2e17f2457e7741b643f"
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "57a00d1312aaf656556de0dcbf56b00a35f97cff64d7ed69787cd3f6a975444f845ed4a6e1f197e3c89fc9ef5a65b1bc418db81293127e4728a1a91f2976461c"
   }
 }

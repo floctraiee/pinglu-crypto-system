@@ -2,7 +2,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from common_crypto.crypto_utils import generate_keypair
+from common_crypto.sm import generate_keypair
 from common_crypto.hash_chain import ZERO_HASH, record_hash
 from common_crypto.batch import build_batch, verify_batch
 

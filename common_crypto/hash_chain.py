@@ -1,5 +1,5 @@
 import json
-from .crypto_utils import sm3_hex
+from .sm import sm3_hex
 
 # 每台设备的第一条记录使用这个起始摘要
 ZERO_HASH = "0" * 64

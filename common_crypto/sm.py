@@ -25,7 +25,7 @@ def generate_keypair():
     return private_key, public_key
 
 
-def sign_message(data: bytes, private_key: str, public_key: str):
+def sign_message(private_key: str, public_key: str, data: bytes):
     """使用 SM2 和 SM3 对数据签名。"""
     obj = _create_sm2(private_key, public_key)
     n = int(sm2.default_ecc_table["n"], 16)
@@ -37,7 +37,7 @@ def sign_message(data: bytes, private_key: str, public_key: str):
             return signature
 
 
-def verify_message(data: bytes, signature: str, public_key: str):
+def verify_message(public_key: str, data: bytes, signature: str):
     """使用公钥验签，通过返回 True，失败返回 False。"""
     obj = _create_sm2(public_key=public_key)
     try:

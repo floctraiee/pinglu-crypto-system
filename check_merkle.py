@@ -1,4 +1,4 @@
-from common_crypto.crypto_utils import sm3_hex
+from common_crypto.sm import sm3_hex
 from common_crypto.merkle import (
     merkle_root,
     merkle_proof,

@@ -53,8 +53,8 @@ output = Path(__file__).resolve().parent / "test_data"
 output.mkdir(exist_ok=True)
 
 files = {
-    "sample_batch.json": batch,
-    "device_registry.json": {
+    "normal_batch.json": batch,
+    "registry_public.json": {
         registration["device_id"]: registration
     },
 }

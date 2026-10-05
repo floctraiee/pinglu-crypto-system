@@ -1,28 +1,13 @@
-import json
 from .sm import sm3_hex
+from .canonical import canonical_bytes, record_body
 
 # 每台设备的第一条记录使用这个起始摘要
 ZERO_HASH = "0" * 64
 
 
 def record_hash(record):
-    """统一编码后计算摘要，计算时排除摘要字段本身。"""
-    body = {
-        key: value
-        for key, value in record.items()
-        if key != "record_hash"
-    }
-
-    data = json.dumps(
-        body,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-        allow_nan=False,
-    ).encode("utf-8")
-
-    return sm3_hex(data)
-
+    """使用统一编码计算记录摘要。"""
+    return sm3_hex(canonical_bytes(record_body(record)))
 
 def verify_chain(records, previous_hash=ZERO_HASH, start_sequence=1):
     """检查同一台设备的连续记录，返回异常列表。"""

@@ -74,7 +74,7 @@ def test_reject_nan():
 
 from datetime import datetime, timedelta, timezone
 
-from common_crypto.hash_chain import ZERO_HASH, record_hash
+from common_crypto.hash_chain import ZERO_HASH, record_hash, verify_chain 
 from common_crypto.sm import generate_keypair, verify_message
 from device_simulator.batch import build_batch
 
@@ -144,3 +144,72 @@ def test_build_batch():
 
     with pytest.raises(ValueError, match="摘要链检查失败"):
         build_batch(records, private_key, public_key)
+
+import json
+import sqlite3
+
+from device_simulator.batch import create_next_batch
+
+
+def test_continuous_batches_and_saved_state(tmp_path):
+    private_key, public_key = generate_keypair()
+
+    registration = {
+        "device_id": "WL-001",
+        "device_type": "water_level",
+        "longitude": "108.500000",
+        "latitude": "22.000000",
+        "public_key": public_key,
+    }
+
+    db_path = tmp_path / "simulator.db"
+
+    first = create_next_batch(
+        registration, private_key, db_path=db_path
+    )
+    second = create_next_batch(
+        registration, private_key, db_path=db_path
+    )
+
+    assert first["start_sequence"] == 1
+    assert first["end_sequence"] == 10
+    assert second["start_sequence"] == 11
+    assert second["end_sequence"] == 20
+
+    assert (
+        second["records"][0]["previous_hash"]
+        == first["records"][-1]["record_hash"]
+    )
+
+    assert verify_chain(
+        first["records"] + second["records"]
+    ) == []
+
+    # 每次调用都会关闭数据库；再次调用必须从磁盘恢复
+    third = create_next_batch(
+        registration, private_key, db_path=db_path
+    )
+
+    assert third["batch_id"] == "WL-001-000003"
+    assert third["start_sequence"] == 21
+    assert third["end_sequence"] == 30
+    assert (
+        third["records"][0]["previous_hash"]
+        == second["records"][-1]["record_hash"]
+    )
+
+    conn = sqlite3.connect(str(db_path))
+    try:
+        count = conn.execute(
+            "SELECT COUNT(*) FROM generated_batches"
+        ).fetchone()[0]
+
+        saved = conn.execute(
+            "SELECT state_json FROM simulator_state WHERE device_id = ?",
+            ("WL-001",),
+        ).fetchone()[0]
+
+        assert count == 3
+        assert json.loads(saved)["last_sequence"] == 30
+    finally:
+        conn.close()

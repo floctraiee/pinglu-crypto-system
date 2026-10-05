@@ -130,3 +130,173 @@ def build_batch(records, private_key, public_key):
 
     return batch
 
+
+import json
+import sqlite3
+from datetime import timezone
+from pathlib import Path
+
+from common_crypto.hash_chain import ZERO_HASH
+from .generator import make_water_records
+
+
+def create_next_batch(
+    registration,
+    private_key,
+    batch_size=10,
+    db_path=None,
+):
+    """生成下一批，并在同一事务中保存批次和设备状态。"""
+    if type(batch_size) is not int or batch_size < 1:
+        raise ValueError("batch_size 必须是正整数")
+
+    if db_path is None:
+        db_path = (
+            Path(__file__).resolve().parents[1] / "simulator.db"
+        )
+
+    device_id = registration["device_id"]
+    conn = sqlite3.connect(str(db_path), timeout=30)
+
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS simulator_state (
+                device_id TEXT PRIMARY KEY,
+                state_json TEXT NOT NULL
+            )
+        """)
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS generated_batches (
+                device_id TEXT NOT NULL,
+                batch_id TEXT NOT NULL,
+                raw_json TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                PRIMARY KEY (device_id, batch_id)
+            )
+        """)
+
+        conn.commit()
+        conn.execute("BEGIN IMMEDIATE")
+
+        row = conn.execute(
+            "SELECT state_json FROM simulator_state WHERE device_id = ?",
+            (device_id,),
+        ).fetchone()
+
+        if row is None:
+            state = {
+                "last_sequence": 0,
+                "last_hash": ZERO_HASH,
+                "last_batch_number": 0,
+                "last_timestamp": None,
+                "public_key": registration["public_key"],
+                "device_type": registration["device_type"],
+            }
+        else:
+            state = json.loads(row[0])
+
+        if (
+            state["public_key"] != registration["public_key"]
+            or state["device_type"] != registration["device_type"]
+        ):
+            raise ValueError("设备身份与保存状态不一致")
+
+        batch_number = state["last_batch_number"] + 1
+        batch_id = f"{device_id}-{batch_number:06d}"
+
+        if state["last_timestamp"] is None:
+            start_time = datetime.now(
+                timezone(timedelta(hours=8))
+            ).replace(microsecond=0)
+        else:
+            start_time = (
+                datetime.fromisoformat(state["last_timestamp"])
+                + timedelta(seconds=1)
+            )
+
+        records = make_water_records(
+            registration=registration,
+            batch_id=batch_id,
+            start_sequence=state["last_sequence"] + 1,
+            previous_hash=state["last_hash"],
+            start_time=start_time,
+            count=batch_size,
+        )
+
+        batch = build_batch(
+            records,
+            private_key,
+            registration["public_key"],
+        )
+
+        # 检查签名与登记公钥是否配套
+        from common_crypto.sm import verify_message
+
+        if not verify_message(
+            registration["public_key"],
+            canonical_bytes(signed_header(batch)),
+            batch["signature"],
+        ):
+            raise ValueError("批次签名与登记公钥不匹配")
+
+        conn.execute(
+            """
+            INSERT INTO generated_batches
+                (device_id, batch_id, raw_json)
+            VALUES (?, ?, ?)
+            """,
+            (
+                device_id,
+                batch_id,
+                json.dumps(batch, ensure_ascii=False, allow_nan=False),
+            ),
+        )
+
+        state.update({
+            "last_sequence": records[-1]["sequence"],
+            "last_hash": records[-1]["record_hash"],
+            "last_batch_number": batch_number,
+            "last_timestamp": records[-1]["timestamp"],
+        })
+
+        conn.execute(
+            """
+            INSERT INTO simulator_state (device_id, state_json)
+            VALUES (?, ?)
+            ON CONFLICT(device_id)
+            DO UPDATE SET state_json = excluded.state_json
+            """,
+            (
+                device_id,
+                json.dumps(state, ensure_ascii=False),
+            ),
+        )
+
+        conn.commit()
+        return batch
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
+
+
+if __name__ == "__main__":
+    from .register import register_water_device
+
+    registration, private_key = register_water_device()
+
+    for _ in range(2):
+        batch = create_next_batch(registration, private_key)
+
+        print(
+            f"批次：{batch['batch_id']}，"
+            f"序号：{batch['start_sequence']}～"
+            f"{batch['end_sequence']}，"
+            f"数量：{batch['count']}"
+        )
+
+    print("批次与设备状态已保存")

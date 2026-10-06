@@ -5,5 +5,47 @@
     "longitude": "108.500000",
     "latitude": "22.000000",
     "public_key": "57a00d1312aaf656556de0dcbf56b00a35f97cff64d7ed69787cd3f6a975444f845ed4a6e1f197e3c89fc9ef5a65b1bc418db81293127e4728a1a91f2976461c"
+  },
+  "WE-001": {
+    "device_id": "WE-001",
+    "device_type": "weather",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "3df617ba393fdc6d7122cdcee2fb5a8800f51e3836b73fdfd9a81eba384a576255e676e5427abcc71930a679d7f42c6c545e87f5490a650ff53694e122f34431"
+  },
+  "NM-001": {
+    "device_id": "NM-001",
+    "device_type": "navigation_mark",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "a4a2e1908367671492ce2a2d173773ca8fc782e6983689f94dd164db9109a8fad289379b3faab2dfe3a7d8bf692b5d5f69f1f8f14df6333de6c8bdb254deb37c"
+  },
+  "SL-001": {
+    "device_id": "SL-001",
+    "device_type": "slope",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "73426c215e3e57d66293085266c4cbea8d06b33d18fb698d4aaf5656772ae662fdb452f527eb7ba6cf68e2902d1832563e4e5d420657ee7c83ae333e435ece04"
+  },
+  "LK-001": {
+    "device_id": "LK-001",
+    "device_type": "lock",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "f3dc2ad4863e1f0abd712da9d7f4e836730fc9a79bcb0beb5c6efe111eb4472a6526cec290b865dd60f7e5103a23301a7f0f2bb54b7473e04a9eed6982c82956"
+  },
+  "DR-001": {
+    "device_id": "DR-001",
+    "device_type": "drone",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "92220bc68136096d15f6c50418ea513047899ae32a1a79189016c7ad8a3963a271e337100ab9f730503f0ab4223842ddf2976e89b61a0352852c6f6ed1a1d766"
+  },
+  "SB-001": {
+    "device_id": "SB-001",
+    "device_type": "survey_boat",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "a20462d9a30b238892ce7119e07dc57afe8b1486801059db4683ac3d080467f03857babbd31f40891370bce929e8b3cf003c31e61fe7fb18e411436678b7f837"
   }
 }

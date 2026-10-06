@@ -301,3 +301,43 @@ def test_seven_device_types(
             first["records"][0]["longitude"]
             != first["records"][-1]["longitude"]
         )        
+
+from device_simulator.register import register_devices
+
+
+def test_device_registration_persistence(tmp_path):
+    keys_dir = tmp_path / "keys"
+    output_path = tmp_path / "registry_public.json"
+
+    first = register_devices(
+        count=7,
+        keys_dir=keys_dir,
+        output_path=output_path,
+    )
+    second = register_devices(
+        count=7,
+        keys_dir=keys_dir,
+        output_path=output_path,
+    )
+
+    # 再次登记应加载同一批密钥
+    assert first == second
+
+    assert set(first) == {
+        "WL-001", "WE-001", "NM-001", "SL-001",
+        "LK-001", "DR-001", "SB-001",
+    }
+
+    # 七台设备各自使用独立公钥
+    assert len({
+        item["public_key"] for item in first.values()
+    }) == 7
+
+    exported = json.loads(
+        output_path.read_text(encoding="utf-8")
+    )
+    assert exported == first
+    assert all(
+        "private_key" not in item
+        for item in exported.values()
+    )

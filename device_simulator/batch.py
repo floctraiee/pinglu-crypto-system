@@ -137,7 +137,7 @@ from datetime import timezone
 from pathlib import Path
 
 from common_crypto.hash_chain import ZERO_HASH
-from .generator import make_water_records
+from .generator import make_records
 
 
 def create_next_batch(
@@ -215,7 +215,7 @@ def create_next_batch(
                 + timedelta(seconds=1)
             )
 
-        records = make_water_records(
+        records = make_records(
             registration=registration,
             batch_id=batch_id,
             start_sequence=state["last_sequence"] + 1,

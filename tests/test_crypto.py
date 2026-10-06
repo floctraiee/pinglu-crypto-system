@@ -213,3 +213,91 @@ def test_continuous_batches_and_saved_state(tmp_path):
         assert json.loads(saved)["last_sequence"] == 30
     finally:
         conn.close()
+
+@pytest.mark.parametrize(
+    "device_type,device_id,payload_fields",
+    [
+        (
+            "water_level", "WL-001",
+            {"water_level_m"},
+        ),
+        (
+            "weather", "WE-001",
+            {"wind_speed_m_s", "rainfall_mm"},
+        ),
+        (
+            "navigation_mark", "NM-001",
+            {"battery_v", "light_state"},
+        ),
+        (
+            "slope", "SL-001",
+            {"displacement_mm"},
+        ),
+        (
+            "lock", "LK-001",
+            {"gate_open_pct", "water_level_m"},
+        ),
+        (
+            "drone", "DR-001",
+            {"altitude_m", "image_event"},
+        ),
+        (
+            "survey_boat", "SB-001",
+            {"water_depth_m", "speed_kn"},
+        ),
+    ],
+)
+def test_seven_device_types(
+    tmp_path,
+    device_type,
+    device_id,
+    payload_fields,
+):
+    private_key, public_key = generate_keypair()
+
+    registration = {
+        "device_id": device_id,
+        "device_type": device_type,
+        "longitude": "108.500000",
+        "latitude": "22.000000",
+        "public_key": public_key,
+    }
+
+    db_path = tmp_path / "simulator.db"
+
+    first = create_next_batch(
+        registration, private_key, db_path=db_path
+    )
+    second = create_next_batch(
+        registration, private_key, db_path=db_path
+    )
+
+    assert first["batch_id"] == f"{device_id}-000001"
+    assert second["batch_id"] == f"{device_id}-000002"
+    assert second["start_sequence"] == 11
+    assert second["end_sequence"] == 20
+
+    for batch in (first, second):
+        assert verify_message(
+            public_key,
+            canonical_bytes(signed_header(batch)),
+            batch["signature"],
+        )
+
+        for record in batch["records"]:
+            assert record["device_type"] == device_type
+            assert set(record["payload"]) == payload_fields
+            assert all(
+                isinstance(value, str)
+                for value in record["payload"].values()
+            )
+
+    assert verify_chain(
+        first["records"] + second["records"]
+    ) == []
+
+    if device_type in {"drone", "survey_boat"}:
+        assert (
+            first["records"][0]["longitude"]
+            != first["records"][-1]["longitude"]
+        )        

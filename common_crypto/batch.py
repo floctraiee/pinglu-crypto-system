@@ -1,7 +1,7 @@
 import json
 from copy import deepcopy
 
-from .crypto_utils import sign_message, verify_message
+from .sm import sign_message, verify_message
 from .hash_chain import ZERO_HASH, record_hash, verify_chain
 from .merkle import merkle_root
 
@@ -69,9 +69,9 @@ def build_batch(records, private_key, public_key):
     return {
         "header": header,
         "records": deepcopy(records),
-        "signature": sign_message(
-            encoded(header), private_key, public_key
-        ),
+       "signature": sign_message(
+           private_key, public_key, encoded(header)
+           ),
     }
 
 
@@ -99,10 +99,10 @@ def verify_batch(
             errors.append("设备注册信息不匹配")
 
         signature_ok = verify_message(
-            encoded(header),
-            batch["signature"],
-            registration["public_key"],
-        )
+               registration["public_key"],
+               encoded(header),
+                batch["signature"],
+                )
         if not signature_ok:
             errors.append("SM2验签失败")
 

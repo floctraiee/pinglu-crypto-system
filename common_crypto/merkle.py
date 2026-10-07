@@ -1,4 +1,4 @@
-from .crypto_utils import sm3_hex
+from .sm import sm3_hex
 
 
 def leaf_node(record_hash):

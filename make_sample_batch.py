@@ -2,68 +2,99 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from common_crypto.crypto_utils import generate_keypair
-from common_crypto.hash_chain import ZERO_HASH, record_hash
-from common_crypto.batch import build_batch, verify_batch
+from common_crypto.canonical import canonical_bytes, signed_header
+from common_crypto.hash_chain import ZERO_HASH, record_hash, verify_chain
+from common_crypto.merkle import merkle_root
+from common_crypto.sm import sm3_hex, verify_message
 
-# 生成样例用的临时密钥，私钥不保存
-private_key, public_key = generate_keypair()
+from device_simulator.register import register_water_device
+from device_simulator.batch import build_batch
 
-registration = {
-    "device_id": "water_001",
-    "device_type": "water_level",
-    "public_key": public_key,
-}
 
-records = []
-previous = ZERO_HASH
-start_time = datetime(2026, 10, 3, tzinfo=timezone.utc)
+def main():
+    registration, private_key = register_water_device()
+    public_key = registration["public_key"]
+    device_id = registration["device_id"]
 
-for sequence in range(1, 11):
-    record = {
-        "device_id": "water_001",
-        "device_type": "water_level",
-        "batch_id": "water_001_000001",
-        "sequence": sequence,
-        "timestamp": (
-            start_time + timedelta(seconds=sequence - 1)
-        ).isoformat(),
-        "longitude": "108.500000",
-        "latitude": "22.000000",
-        "data": {
-            "value": f"{3.20 + sequence * 0.01:.2f}",
-            "unit": "m",
-            "status": "normal",
-        },
-        "previous_hash": previous,
-    }
+    records = []
+    previous = ZERO_HASH
 
-    record["record_hash"] = record_hash(record)
-    records.append(record)
-    previous = record["record_hash"]
-
-batch = build_batch(records, private_key, public_key)
-result = verify_batch(batch, registration)
-
-print("验证结果：", result)
-assert result["valid"], "正常批次验证失败"
-
-# 文件保存到项目根目录下的 test_data
-output = Path(__file__).resolve().parent / "test_data"
-output.mkdir(exist_ok=True)
-
-files = {
-    "sample_batch.json": batch,
-    "device_registry.json": {
-        registration["device_id"]: registration
-    },
-}
-
-for filename, content in files.items():
-    (output / filename).write_text(
-        json.dumps(content, ensure_ascii=False, indent=2),
-        encoding="utf-8",
+    start_time = datetime(
+        2026, 10, 5, 12, 0, 0,
+        tzinfo=timezone(timedelta(hours=8)),
     )
 
-print("完整批次验证通过")
-print("样例目录：", output)
+    for sequence in range(1, 11):
+        record = {
+            "version": 1,
+            "device_id": device_id,
+            "device_type": registration["device_type"],
+            "timestamp": (
+                start_time + timedelta(seconds=sequence - 1)
+            ).isoformat(),
+            "longitude": registration["longitude"],
+            "latitude": registration["latitude"],
+            "sequence": sequence,
+            "batch_id": f"{device_id}-000001",
+            "payload": {
+                "water_level_m": f"{3.20 + sequence * 0.01:.2f}",
+            },
+            "status": "normal",
+            "previous_hash": previous,
+        }
+
+        record["record_hash"] = record_hash(record)
+        records.append(record)
+        previous = record["record_hash"]
+
+    batch = build_batch(records, private_key, public_key)
+
+    # 用公开信息检查样例，不调用旧批次验证函数
+    assert verify_message(
+        public_key,
+        canonical_bytes(signed_header(batch)),
+        batch["signature"],
+    ), "批次签名检查失败"
+
+    assert verify_chain(
+        batch["records"],
+        previous_hash=ZERO_HASH,
+        start_sequence=1,
+    ) == [], "摘要链检查失败"
+
+    assert batch["merkle_root"] == merkle_root([
+        record_hash(record) for record in batch["records"]
+    ]), "Merkle 根检查失败"
+
+    assert batch["count"] == len(batch["records"]) == 10
+    assert batch["start_sequence"] == 1
+    assert batch["end_sequence"] == 10
+
+    output = Path(__file__).resolve().parent / "test_data"
+    output.mkdir(exist_ok=True)
+
+    files = {
+        "normal_batch.json": batch,
+        "registry_public.json": {
+            device_id: registration,
+        },
+    }
+
+    for filename, content in files.items():
+        (output / filename).write_text(
+            json.dumps(content, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+    fingerprint = sm3_hex(bytes.fromhex(public_key))
+
+    print("设备：", device_id)
+    print("批次：", batch["batch_id"])
+    print("记录数量：", batch["count"])
+    print("公钥 SM3 指纹：", fingerprint)
+    print("标准批次样例检查通过")
+    print("样例目录：", output)
+
+
+if __name__ == "__main__":
+    main()

@@ -217,5 +217,11 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Local SQLite databases
+# 本项目设备私钥
+keys/
+
+# 本机 SQLite 数据库及临时文件
 *.db
+*.db-journal
+*.db-wal
+*.db-shm

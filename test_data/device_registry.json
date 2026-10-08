@@ -1,0 +1,7 @@
+{
+  "water_001": {
+    "device_id": "water_001",
+    "device_type": "water_level",
+    "public_key": "a323808e6d7ebd65d73b8ec32d5223b62e089a5b1bb5d15a705e543e48ccf136cd2b0789a18bd51d89aaa3195573c099dadddbde511cd2e17f2457e7741b643f"
+  }
+}

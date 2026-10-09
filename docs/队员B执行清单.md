@@ -178,31 +178,39 @@ from common_crypto.batch import BATCH_FIELDS, RECORD_FIELDS, PAYLOAD_FIELDS
 
 ## 1. 目标文件清单
 
-```
-edge_gateway/                      ← 全部新建
-├── __init__.py                    S01
-├── config.py                      S02
-├── storage.py                     S05 / S06
-├── validator.py                   S10  ← 现在只是薄封装，别自己写密码学
-├── main.py                        S15 / S16
-├── forward.py                     S20
-└── data/                          ← 运行时自动创建，.gitignore 已覆盖 *.db
+**已完成**（提交 `b03aff3`、`7d9926f`，已推到 `origin/feature/edge-gateway`）：
 
-mosquitto.conf                     S03
-tools/import_registry.py           S22  ← 把 registry_public.json 导入中心（补 D14）
+```
+edge_gateway/
+├── __init__.py                    ✅ S01
+├── config.py                      ✅ S02
+└── storage.py                     ✅ S05 / S06
+
+mosquitto.conf                     ✅ S03
+tools/import_registry.py           ✅ S22  ← 把 registry_public.json 导入中心（补 D14）
+tests/manual/mqtt_pub_smoke.py     ✅ S04
+tests/manual/mqtt_sub_smoke.py     ✅ S04
+```
+
+**待完成**：
+
+```
+edge_gateway/
+├── validator.py                   S10  ← 薄封装，别自己写密码学
+├── main.py                        S15 / S16
+└── forward.py                     S20
+
+tests/manual/
+└── mock_center.py                 S23（可选，离线自测 ack/退避）
 
 tests/
-├── manual/
-│   ├── mqtt_pub_smoke.py          S04（由 test_mqtt_pub.py 改造）
-│   ├── mqtt_sub_smoke.py          S04（由 test_mqtt_sub.py 改造）
-│   └── mock_center.py             S23（可选，离线自测 ack/退避）
 ├── inject_anomalies.py            S25
 ├── test_tamper.py                 S28
 ├── test_offline.py                S30
 └── tamper_cache.py                S32
 ```
 
-**要删除**：`tests/test_mqtt_pub.py`、`tests/test_mqtt_sub.py`（内容迁到 `tests/manual/`）
+**已删除**：`tests/test_mqtt_pub.py`、`tests/test_mqtt_sub.py`（内容迁到 `tests/manual/`）
 
 ---
 
@@ -395,27 +403,36 @@ def can_ack(resp) -> bool:
 - **传输层注意**：QoS 1 和 HTTP 超时都会重试，按 `device_id + batch_id` 幂等，不依赖"恰好一次"（任务书 P0042）
 - **需要谁的文件**：A 的中心（✅ 已到位）；`device_simulator/publish.py`（**D11，仍未做**）
 
-#### S22 · 联调前置：把公钥导入中心（补 D14）
+#### S22 · 联调前置：把公钥导入中心 ✅ 已完成
 - **背景**：中心**没有** `POST /devices`，也没有导入脚本。`devices` 表空着的话，任何批次都会被判 `UNKNOWN_DEVICE`。
-- **干什么**：新建 `tools/import_registry.py`
+- **产出**：[tools/import_registry.py](<tools/import_registry.py>)，三种用法：
 
-```python
-"""把 test_data/registry_public.json 导入中心 devices 表。在仓库根目录执行。"""
-import json
-from pathlib import Path
-from center_platform import storage
+```powershell
+# 核对指纹（不写库）—— 就是 D8 要交的东西
+.venv\Scripts\python.exe tools\import_registry.py --fingerprint-only
 
-storage.init_db()
-registry = json.loads(Path("test_data/registry_public.json").read_text(encoding="utf-8"))
-for item in registry.values():
-    storage.register_device(item["device_id"], item["device_type"], item["public_key"])
-    print(f"{item['device_id']} 已登记")
-print(f"共 {len(registry)} 台")
+# 只看会导入什么
+.venv\Scripts\python.exe tools\import_registry.py --dry-run
+
+# 真正导入
+.venv\Scripts\python.exe tools\import_registry.py
 ```
 
-- 执行：`.venv\Scripts\python.exe tools\import_registry.py`
 - ⚠️ 必须和中心服务**用同一个 `center_platform/data/center.db`**，所以要在仓库根目录跑
 - **建议**：把这个需求同时提给队长，正式的导入入口应该由中心侧提供
+
+##### D8 指纹核对表（2026-10-09 生成，请与队长、队员A 逐条确认）
+
+| 设备ID | 类型 | 公钥前 16 位 | 公钥 SM3 指纹 |
+|---|---|---|---|
+| `DR-001` | drone | `92220bc68136096d` | `0e150c34a9a477c2836f19aa5ca5390b62e65c1e42c3e4150e86d5f46f7b4353` |
+| `LK-001` | lock | `f3dc2ad4863e1f0a` | `23cc83d4916328b618b59e4f85aacf712ef873b4a2c53739fd9bc218ac37d6a0` |
+| `NM-001` | navigation_mark | `a4a2e19083676714` | `2c96729981f5301f89f5bc43a364463022ed6cf39749b4907a864fb5b2035b18` |
+| `SB-001` | survey_boat | `a20462d9a30b2388` | `99b5e49dd2f80b30a1f7cd52f93f8711f7c25fd5966307ccf546e44096d61b1b` |
+| `SL-001` | slope | `73426c215e3e57d6` | `ddc4c8c082d10de7aa1067417263482b3bb51df73ede4d668771693383d1f6fa` |
+| `WE-001` | weather | `3df617ba393fdc6d` | `81ed9b1c050933175701139daae52322405edcb42979a6d29784cb5486f6c4d9` |
+| `WL-001` | water_level | `57a00d1312aaf656` | `bf41f4821258a959730e1975fc2f618e3fa25a2c256f6c36b37ed38e2d3aa885` |
+
 
 #### S23 · （可选）`tests/manual/mock_center.py`
 - **干什么**：标准库 `http.server` 写个本地 stub，按契约返回 `accepted`/`rejected`/`duplicate`，`CENTER_URL` 指向它
@@ -520,11 +537,14 @@ print(f"共 {len(registry)} 台")
 
 ## 4. 验收清单
 
-- [ ] S04：`python -m pytest` 不再因 MQTT 脚本收集失败（**另外 D13 要修好，否则仍会因缺 `httpx2` 失败**）
+- [x] S02：配置项可由环境变量覆盖（已验证 3 项）
+- [x] S03：`mosquitto -c mosquitto.conf -v` 能起，MQTT 最小收发打通
+- [x] S04：`python -m pytest` 不再因 MQTT 脚本收集失败（**D13 未修，仍会因缺 `httpx2` 失败**）
+- [x] S05/S06：正常批次入队、重复送达不生成第二条、链尾正确推进、初验失败进 `audit_pending` 且不污染链尾
+- [x] S22：7 台设备都进了中心 `devices` 表
 - [ ] S11：A 的 `normal_batch.json` 过 `validator.verify()` → `valid=True`
-- [ ] S06：正常批次入队；**重启后 pending 不丢**
+- [ ] S06 补充：**重启进程后 pending 不丢**（要用 `main.py` 跑一次真实重启）
 - [ ] S15：`-m edge_gateway.main` 能起；模拟器发一批，**网关只接收一次并打印 ID**
-- [ ] S22：7 台设备都进了中心 `devices` 表
 - [ ] S20：停中心期间 pending 增长，恢复后**按序补传且 acked**
 - [ ] S25：六类异常样本齐全，各带 `label.json`，且都用**新 batch_id**
 - [ ] S28：label 与中心 audits 对得上，**正常样本零误报**

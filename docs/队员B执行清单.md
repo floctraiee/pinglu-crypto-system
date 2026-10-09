@@ -178,39 +178,44 @@ from common_crypto.batch import BATCH_FIELDS, RECORD_FIELDS, PAYLOAD_FIELDS
 
 ## 1. 目标文件清单
 
-**已完成**（提交 `b03aff3`、`7d9926f`，已推到 `origin/feature/edge-gateway`）：
+**已完成**：
 
 ```
 edge_gateway/
 ├── __init__.py                    ✅ S01
 ├── config.py                      ✅ S02
-└── storage.py                     ✅ S05 / S06
+├── storage.py                     ✅ S05 / S06   pending_batches + device_chain + gateway_audit
+├── validator.py                   ✅ S10         薄封装，复用 common_crypto.batch.verify_batch
+├── main.py                        ✅ S15 / S16   MQTT 订阅 + 快速入队 + 工作线程
+└── forward.py                     ✅ S20         按序转发 + ack 判定 + 退避重试
 
 mosquitto.conf                     ✅ S03
-tools/import_registry.py           ✅ S22  ← 把 registry_public.json 导入中心（补 D14）
+tools/import_registry.py           ✅ S22
 tests/manual/mqtt_pub_smoke.py     ✅ S04
 tests/manual/mqtt_sub_smoke.py     ✅ S04
+tests/manual/publish_sample.py     ✅ 手工联调：把样本批次通过 MQTT 发出去
 ```
 
 **待完成**：
 
 ```
-edge_gateway/
-├── validator.py                   S10  ← 薄封装，别自己写密码学
-├── main.py                        S15 / S16
-└── forward.py                     S20
-
-tests/manual/
-└── mock_center.py                 S23（可选，离线自测 ack/退避）
-
 tests/
-├── inject_anomalies.py            S25
-├── test_tamper.py                 S28
-├── test_offline.py                S30
-└── tamper_cache.py                S32
+├── inject_anomalies.py            S25  六类异常样本 + label.json
+├── test_tamper.py                 S28  异常对照
+├── test_offline.py                S30  断网/重启/缓存篡改/重复/交错
+└── tamper_cache.py                S32  篡改 SQLite 缓存
 ```
 
 **已删除**：`tests/test_mqtt_pub.py`、`tests/test_mqtt_sub.py`（内容迁到 `tests/manual/`）
+
+### 网关数据流
+
+```
+MQTT ──on_message──▶ 内存队列 ──工作线程──▶ 初验 + 落库 ──▶ SQLite
+                      (只入队，不 IO)                          │
+                                                               ▼
+                中心 ◀── POST /batches ── 转发线程（按设备按序、定时重试）
+```
 
 ---
 
@@ -541,11 +546,11 @@ def can_ack(resp) -> bool:
 - [x] S03：`mosquitto -c mosquitto.conf -v` 能起，MQTT 最小收发打通
 - [x] S04：`python -m pytest` 不再因 MQTT 脚本收集失败（**D13 未修，仍会因缺 `httpx2` 失败**）
 - [x] S05/S06：正常批次入队、重复送达不生成第二条、链尾正确推进、初验失败进 `audit_pending` 且不污染链尾
+- [x] S10：A 的 `normal_batch.json` 过 `validator.verify()` → `valid=True`
+- [x] S15/S16：网关只接收一次并打印 ID；QoS1 重发被唯一约束挡住
+- [x] S20：**端到端实测通过** —— 中心停机期间每轮只重试 1 批（不抢跑），恢复后每轮确认 1 批、严格按序
 - [x] S22：7 台设备都进了中心 `devices` 表
-- [ ] S11：A 的 `normal_batch.json` 过 `validator.verify()` → `valid=True`
-- [ ] S06 补充：**重启进程后 pending 不丢**（要用 `main.py` 跑一次真实重启）
-- [ ] S15：`-m edge_gateway.main` 能起；模拟器发一批，**网关只接收一次并打印 ID**
-- [ ] S20：停中心期间 pending 增长，恢复后**按序补传且 acked**
+- [ ] S06 补充：显式跑一次"网关重启后 pending 不丢"（要用 `main.py` 做真实重启，建议写进 S30）
 - [ ] S25：六类异常样本齐全，各带 `label.json`，且都用**新 batch_id**
 - [ ] S28：label 与中心 audits 对得上，**正常样本零误报**
 - [ ] S33：缓存篡改被中心独立拦下并留下审计

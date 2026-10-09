@@ -50,8 +50,8 @@ CREATE TABLE IF NOT EXISTS pending_batches (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
     device_id           TEXT    NOT NULL,
     batch_id            TEXT    NOT NULL,
-    first_seq           INTEGER NOT NULL,
-    last_seq            INTEGER NOT NULL,
+    first_seq           INTEGER,
+    last_seq            INTEGER,
     raw_json            TEXT    NOT NULL,
     edge_result         TEXT,
     status              TEXT    NOT NULL DEFAULT 'pending',
@@ -77,6 +77,23 @@ CREATE TABLE IF NOT EXISTS device_chain (
     last_batch_no INTEGER NOT NULL,
     updated_at    TEXT    NOT NULL
 );
+
+-- 连设备ID/批次号都取不到的消息（超长、JSON 解析失败、不是对象）。
+-- 九步第 2 步要求"解析失败也存审计日志"，且绝不能让订阅程序崩溃。
+CREATE TABLE IF NOT EXISTS gateway_audit (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    gateway_received_at TEXT    NOT NULL,
+    topic               TEXT,
+    device_id           TEXT,
+    batch_id            TEXT,
+    event               TEXT    NOT NULL,
+    reason_code         TEXT,
+    detail              TEXT,
+    raw_text            TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_time
+    ON gateway_audit(gateway_received_at);
 """
 
 
@@ -151,8 +168,8 @@ def save_received(batch, raw_text, edge_result, gateway_received_at=None):
             (
                 device_id,
                 batch_id,
-                batch["start_sequence"],
-                batch["end_sequence"],
+                batch.get("start_sequence"),
+                batch.get("end_sequence"),
                 raw_text,
                 json.dumps(edge_result, ensure_ascii=False, sort_keys=True),
                 status,
@@ -241,6 +258,35 @@ def record_attempt(device_id, batch_id, error):
              WHERE device_id = ? AND batch_id = ?
             """,
             (str(error)[:500], device_id, batch_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def save_audit(event, topic=None, device_id=None, batch_id=None,
+               reason_code=None, detail=None, raw_text=None,
+               gateway_received_at=None):
+    """记录连设备ID/批次号都取不到的消息（九步第 2 步）。"""
+    conn = get_connection()
+    try:
+        conn.execute(
+            """
+            INSERT INTO gateway_audit
+                (gateway_received_at, topic, device_id, batch_id,
+                 event, reason_code, detail, raw_text)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                gateway_received_at or now_iso(),
+                topic,
+                device_id,
+                batch_id,
+                event,
+                reason_code,
+                detail,
+                (raw_text or "")[:4096],
+            ),
         )
         conn.commit()
     finally:
@@ -340,6 +386,23 @@ def list_audit_pending():
              ORDER BY device_id, batch_no, id
             """,
             (STATUS_AUDIT_PENDING,),
+        ).fetchall()
+    finally:
+        conn.close()
+    return _rows(rows)
+
+
+def list_gateway_audits(limit=100):
+    """网关本地审计（连设备ID都取不到的消息）。"""
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            """
+            SELECT * FROM gateway_audit
+             ORDER BY id DESC
+             LIMIT ?
+            """,
+            (limit,),
         ).fetchall()
     finally:
         conn.close()

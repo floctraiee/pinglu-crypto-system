@@ -52,9 +52,12 @@ DB_PATH = _env_path("DB_PATH", ROOT / "edge_gateway" / "data" / "edge_cache.db")
 REGISTRY_PATH = _env_path("REGISTRY_PATH", ROOT / "test_data" / "registry_public.json")
 
 # ---- 重试与消息大小 -------------------------------------------------------
-RETRY_INTERVAL = _env_int("RETRY_INTERVAL", 5)        # 转发重试轮询间隔（秒）
+RETRY_INTERVAL = _env_int("RETRY_INTERVAL", 5)        # 没有新批次时的重试扫描间隔（秒）
 HTTP_TIMEOUT = _env_int("HTTP_TIMEOUT", 10)           # 单次 POST 超时（秒）
 MAX_MESSAGE_BYTES = _env_int("MAX_MESSAGE_BYTES", 1048576)  # 单条 MQTT 消息上限
+# 一轮转发里同一台设备最多连发几批（串行、按序；遇到未确认的批次就停）。
+# 100 台 × 每秒 1 条 ÷ 每批 10 条 = 10 批/秒，这个值给积压留出清理余量。
+MAX_PER_DEVICE_PER_ROUND = _env_int("MAX_PER_DEVICE_PER_ROUND", 20)
 
 
 def describe():
@@ -71,6 +74,7 @@ def describe():
         "RETRY_INTERVAL": RETRY_INTERVAL,
         "HTTP_TIMEOUT": HTTP_TIMEOUT,
         "MAX_MESSAGE_BYTES": MAX_MESSAGE_BYTES,
+        "MAX_PER_DEVICE_PER_ROUND": MAX_PER_DEVICE_PER_ROUND,
     }
 
 

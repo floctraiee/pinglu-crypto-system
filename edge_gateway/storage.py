@@ -64,6 +64,9 @@ CREATE TABLE IF NOT EXISTS pending_batches (
     center_status       TEXT,
     center_reason_code  TEXT,
     center_response     TEXT,
+    -- 实时延迟：网关收到该批 → 拿到中心终态的那一刻，单位毫秒。
+    -- 方案第七节 3 的 P95（不高于 1 秒）就按这一列统计；离线补传批次不计入。
+    latency_ms          REAL,
     UNIQUE(device_id, batch_id)
 );
 
@@ -100,8 +103,12 @@ CREATE INDEX IF NOT EXISTS idx_audit_time
 # ---------------------------------------------------------------- 基础
 
 def now_iso():
-    """项目统一使用 +08:00 时区（contract.md §1）。"""
-    return datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds")
+    """项目统一使用 +08:00 时区（contract.md §1）。
+
+    精确到毫秒：方案第七节 3 要求统计「网关收到批次 → 中心完成验证」的 P95
+    （不高于 1 秒），秒级精度算不出可信的 P95。
+    """
+    return datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="milliseconds")
 
 
 def batch_number(batch_id):
@@ -219,17 +226,34 @@ def save_received(batch, raw_text, edge_result, gateway_received_at=None):
 
 
 def mark_result(device_id, batch_id, status, reason_code=None, response=None):
-    """记下中心的回复并把该批置为终态。"""
+    """记下中心的回复并把该批置为终态，同时算出这一批的实时延迟。"""
     if status not in FINAL_STATUSES:
         raise ValueError(f"不是终态：{status}")
 
+    acked_at = now_iso()
+
     conn = get_connection()
     try:
+        row = conn.execute(
+            "SELECT gateway_received_at FROM pending_batches "
+            "WHERE device_id = ? AND batch_id = ?",
+            (device_id, batch_id),
+        ).fetchone()
+
+        latency_ms = None
+        if row and row["gateway_received_at"]:
+            try:
+                received = datetime.fromisoformat(row["gateway_received_at"])
+                acked = datetime.fromisoformat(acked_at)
+                latency_ms = (acked - received).total_seconds() * 1000.0
+            except ValueError:
+                latency_ms = None
+
         conn.execute(
             """
             UPDATE pending_batches
                SET status = ?, center_status = ?, center_reason_code = ?,
-                   center_response = ?, acked_at = ?
+                   center_response = ?, acked_at = ?, latency_ms = ?
              WHERE device_id = ? AND batch_id = ?
             """,
             (
@@ -237,7 +261,8 @@ def mark_result(device_id, batch_id, status, reason_code=None, response=None):
                 (response or {}).get("status"),
                 reason_code,
                 json.dumps(response, ensure_ascii=False, sort_keys=True) if response else None,
-                now_iso(),
+                acked_at,
+                latency_ms,
                 device_id,
                 batch_id,
             ),
@@ -481,6 +506,43 @@ def set_device_chain(device_id, last_hash, last_sequence, last_batch_no):
         conn.close()
 
 
+def latency_stats(include_retried=False):
+    """统计实时处理延迟，供方案第七节 3 的 P95 使用。
+
+    默认**排除重试过的批次和离线补传批次**——方案原文：
+    「以边缘网关接收到批次的时间为起点，以中心完成验证的时间为终点…
+      离线补传数据不计入实时 P95」。
+    """
+    sql = "SELECT latency_ms FROM pending_batches WHERE latency_ms IS NOT NULL"
+    if not include_retried:
+        sql += " AND attempts = 0"
+
+    conn = get_connection()
+    try:
+        values = sorted(row["latency_ms"] for row in conn.execute(sql))
+    finally:
+        conn.close()
+
+    if not values:
+        return {"count": 0}
+
+    def percentile(p):
+        if len(values) == 1:
+            return values[0]
+        index = min(len(values) - 1, int(round((len(values) - 1) * p)))
+        return values[index]
+
+    return {
+        "count": len(values),
+        "min_ms": round(values[0], 1),
+        "median_ms": round(percentile(0.50), 1),
+        "p95_ms": round(percentile(0.95), 1),
+        "max_ms": round(values[-1], 1),
+        "target_ms": 1000.0,
+        "p95_within_target": percentile(0.95) <= 1000.0,
+    }
+
+
 if __name__ == "__main__":
     init_db()
     print(f"数据库: {config.DB_PATH}")
@@ -494,3 +556,15 @@ if __name__ == "__main__":
         print(f"  待处理 {row['device_id']} {row['batch_id']} "
               f"seq {row['first_seq']}~{row['last_seq']} "
               f"尝试 {row['attempts']} 次 状态 {row['status']}")
+
+    stats = latency_stats()
+    print()
+    if stats["count"]:
+        print(f"  实时延迟（排除重试与补传，{stats['count']} 批）："
+              f"中位 {stats['median_ms']} ms，"
+              f"P95 {stats['p95_ms']} ms，"
+              f"最大 {stats['max_ms']} ms，"
+              f"目标 {stats['target_ms']:.0f} ms -> "
+              f"{'达标' if stats['p95_within_target'] else '超标'}")
+    else:
+        print("  实时延迟：暂无可统计的批次")

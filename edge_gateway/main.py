@@ -32,6 +32,9 @@ class Gateway:
 
         self.inbox = queue.Queue(maxsize=queue_size)
         self.stop_event = threading.Event()
+        # 每入库一批就 set 一次，转发线程立刻醒来发送，不必等 RETRY_INTERVAL，
+        # 实时延迟才能压到 1 秒以内（方案第七节 3 的 P95 要求）。
+        self.wake_event = threading.Event()
         self.threads = []
 
         self.stats = {
@@ -156,6 +159,10 @@ class Gateway:
             print(f"[接收] {device_id} {batch_id} 初验未通过"
                   f"（{result['reason_code']}{suffix}），原文待送中心复核")
 
+        # 立刻叫醒转发线程：实时批次的 P95 延迟要求不高于 1 秒（方案第七节 3），
+        # 不能等 RETRY_INTERVAL 的定时轮询。
+        self.wake_event.set()
+
     # ------------------------------------------------------------ 线程
 
     def start(self):
@@ -163,7 +170,7 @@ class Gateway:
                                   name="gateway-worker", daemon=True)
         forwarder = threading.Thread(
             target=forward.run_forever,
-            args=(self.stop_event, self.center_url,
+            args=(self.stop_event, self.wake_event, self.center_url,
                   self.http_timeout, self.forward_interval),
             name="gateway-forward", daemon=True,
         )
@@ -173,6 +180,7 @@ class Gateway:
 
     def stop(self):
         self.stop_event.set()
+        self.wake_event.set()        # 让转发线程立刻从等待中醒来退出
         for thread in self.threads:
             thread.join(timeout=3)
 

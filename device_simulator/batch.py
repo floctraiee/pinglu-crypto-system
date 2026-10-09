@@ -145,6 +145,7 @@ def create_next_batch(
     private_key,
     batch_size=10,
     db_path=None,
+    seed=2026,
 ):
     """生成下一批，并在同一事务中保存批次和设备状态。"""
     if type(batch_size) is not int or batch_size < 1:
@@ -172,9 +173,28 @@ def create_next_batch(
                 batch_id TEXT NOT NULL,
                 raw_json TEXT NOT NULL,
                 status TEXT NOT NULL DEFAULT 'pending',
+                mqtt_status TEXT NOT NULL DEFAULT 'pending',
+                center_status TEXT NOT NULL DEFAULT 'not_requested',
+                mqtt_attempts INTEGER NOT NULL DEFAULT 0,
+                last_mqtt_error TEXT,
                 PRIMARY KEY (device_id, batch_id)
             )
         """)
+
+        # 已存在的正式数据库保持原记录；首次使用新代码时只补充可空/有默认值字段。
+        columns = {
+            row[1] for row in conn.execute("PRAGMA table_info(generated_batches)")
+        }
+        for name, definition in (
+            ("mqtt_status", "TEXT NOT NULL DEFAULT 'pending'"),
+            ("center_status", "TEXT NOT NULL DEFAULT 'not_requested'"),
+            ("mqtt_attempts", "INTEGER NOT NULL DEFAULT 0"),
+            ("last_mqtt_error", "TEXT"),
+        ):
+            if name not in columns:
+                conn.execute(
+                    f"ALTER TABLE generated_batches ADD COLUMN {name} {definition}"
+                )
 
         conn.commit()
         conn.execute("BEGIN IMMEDIATE")
@@ -222,6 +242,7 @@ def create_next_batch(
             previous_hash=state["last_hash"],
             start_time=start_time,
             count=batch_size,
+            seed=seed,
         )
 
         batch = build_batch(
@@ -280,6 +301,67 @@ def create_next_batch(
         conn.rollback()
         raise
 
+    finally:
+        conn.close()
+
+
+def pending_batches(db_path, device_id=None):
+    """读取尚未取得 MQTT PUBACK 的原始批次；不重签名、不改变状态。"""
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    try:
+        sql = """
+            SELECT device_id, batch_id, raw_json, mqtt_attempts
+            FROM generated_batches
+            WHERE mqtt_status = 'pending'
+        """
+        params = []
+        if device_id is not None:
+            sql += " AND device_id = ?"
+            params.append(device_id)
+        sql += " ORDER BY device_id, CAST(substr(batch_id, length(device_id) + 2) AS INTEGER)"
+        return [
+            {
+                "device_id": row["device_id"],
+                "batch_id": row["batch_id"],
+                "batch": json.loads(row["raw_json"]),
+                "mqtt_attempts": row["mqtt_attempts"],
+            }
+            for row in conn.execute(sql, params)
+        ]
+    finally:
+        conn.close()
+
+
+def record_mqtt_result(db_path, device_id, batch_id, confirmed, error=None):
+    """记录 MQTT 结果；PUBACK 不会也不能改变 center_status。"""
+    conn = sqlite3.connect(str(db_path), timeout=30)
+    try:
+        if confirmed:
+            cursor = conn.execute(
+                """
+                UPDATE generated_batches
+                SET mqtt_status = 'broker_confirmed', status = 'broker_confirmed',
+                    mqtt_attempts = mqtt_attempts + 1, last_mqtt_error = NULL
+                WHERE device_id = ? AND batch_id = ? AND mqtt_status = 'pending'
+                """,
+                (device_id, batch_id),
+            )
+        else:
+            cursor = conn.execute(
+                """
+                UPDATE generated_batches
+                SET mqtt_attempts = mqtt_attempts + 1, last_mqtt_error = ?
+                WHERE device_id = ? AND batch_id = ? AND mqtt_status = 'pending'
+                """,
+                (str(error), device_id, batch_id),
+            )
+        if cursor.rowcount != 1:
+            raise ValueError("待发批次不存在或 MQTT 状态已变化")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 

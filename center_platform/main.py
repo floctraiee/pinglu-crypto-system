@@ -83,92 +83,9 @@ def stats():
 
 @app.post("/batches")
 def receive_batch(request: BatchRequest):
-    batch = request.batch
+    # 整个接收流程由 storage 在同一写事务内完成，避免并发时链尾失效。
+    return storage.process_batch(request.batch, validate_batch)
 
-    try:
-        header = batch["header"]
-        device_id = header["device_id"]
-        batch_id = header["batch_id"]
-    except (KeyError, TypeError):
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "status": "rejected",
-                "reason_code": "invalid_batch_structure",
-            },
-        )
-
-    # 1. 查询中心预注册设备
-    registration = storage.get_device(device_id)
-
-    if registration is None:
-        return {
-            "status": "rejected",
-            "reason_code": "unknown_device",
-            "device_id": device_id,
-            "batch_id": batch_id,
-            "affected_sequences": [],
-        }
-
-    # 2. 检查是否已经处理过这个批次
-    existing = storage.batch_exists(device_id, batch_id)
-
-    if existing:
-        return {
-            "status": "duplicate",
-            "reason_code": "duplicate_batch",
-            "device_id": device_id,
-            "batch_id": batch_id,
-            "affected_sequences": [],
-        }
-
-    # 3. 获取设备历史链尾
-    last_record = storage.get_last_record(device_id)
-
-    if last_record:
-        previous_hash = last_record.get("record_hash")
-        start_sequence = int(last_record.get("sequence", 0)) + 1
-    else:
-        previous_hash = "0" * 64
-        start_sequence = 1
-
-    # 4. 中心独立验证
-    result = validate_batch(
-        batch,
-        registration,
-        previous_hash,
-        start_sequence,
-    )
-
-    if not result.get("valid"):
-        record_errors = result.get("record_errors") or []
-
-        affected = []
-
-        for item in record_errors:
-            if isinstance(item, dict):
-                if "sequence" in item:
-                    affected.append(item["sequence"])
-
-        return {
-            "status": "rejected",
-            "reason_code": "validation_failed",
-            "device_id": device_id,
-            "batch_id": batch_id,
-            "affected_sequences": affected,
-            "errors": result.get("errors", []),
-            "record_errors": record_errors,
-        }
-
-    # 5. 验证通过，事务写入数据库
-    storage.insert_valid_batch(batch)
-
-    return {
-        "status": "accepted",
-        "device_id": device_id,
-        "batch_id": batch_id,
-        "affected_sequences": [],
-    }
 
 @app.get("/batches/{batch_id}/proof/{sequence}")
 def proof(batch_id: str, sequence: int):

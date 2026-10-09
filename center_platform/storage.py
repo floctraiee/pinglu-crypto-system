@@ -1,7 +1,9 @@
 import json
 import sqlite3
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+from common_crypto.canonical import canonical_bytes, signed_header
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -81,7 +83,7 @@ def init_db():
 
 
 def now_iso():
-    return datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    return datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds")
 
 
 def register_device(device_id, device_type, public_key, fingerprint=None):
@@ -110,8 +112,8 @@ def register_device(device_id, device_type, public_key, fingerprint=None):
     conn.close()
 
 
-def get_device(device_id):
-    conn = get_connection()
+def get_device(device_id, connection=None):
+    conn = connection if connection is not None else get_connection()
 
     row = conn.execute(
         """
@@ -122,7 +124,8 @@ def get_device(device_id):
         (device_id,),
     ).fetchone()
 
-    conn.close()
+    if connection is None:
+        conn.close()
 
     return dict(row) if row else None
 
@@ -143,8 +146,8 @@ def list_devices():
     return [dict(row) for row in rows]
 
 
-def get_batch(device_id, batch_id):
-    conn = get_connection()
+def get_batch(device_id, batch_id, connection=None):
+    conn = connection if connection is not None else get_connection()
 
     row = conn.execute(
         """
@@ -155,7 +158,8 @@ def get_batch(device_id, batch_id):
         (device_id, batch_id),
     ).fetchone()
 
-    conn.close()
+    if connection is None:
+        conn.close()
 
     if not row:
         return None
@@ -184,8 +188,8 @@ def batch_exists(device_id, batch_id):
     return row is not None
 
 
-def insert_valid_batch(batch, received_at=None):
-    header = batch["header"]
+def insert_valid_batch(batch, received_at=None, connection=None):
+    header = signed_header(batch)
     records = batch["records"]
 
     device_id = header["device_id"]
@@ -194,10 +198,11 @@ def insert_valid_batch(batch, received_at=None):
     if received_at is None:
         received_at = now_iso()
 
-    conn = get_connection()
+    conn = connection if connection is not None else get_connection()
 
     try:
-        conn.execute("BEGIN")
+        if connection is None:
+            conn.execute("BEGIN IMMEDIATE")
 
         conn.execute(
             """
@@ -265,14 +270,17 @@ def insert_valid_batch(batch, received_at=None):
                 ),
             )
 
-        conn.commit()
+        if connection is None:
+            conn.commit()
 
     except Exception:
-        conn.rollback()
+        if connection is None:
+            conn.rollback()
         raise
 
     finally:
-        conn.close()
+        if connection is None:
+            conn.close()
 
 
 def insert_audit(
@@ -282,8 +290,9 @@ def insert_audit(
     reason_code,
     affected_sequences=None,
     raw_batch=None,
+    connection=None,
 ):
-    conn = get_connection()
+    conn = connection if connection is not None else get_connection()
 
     if affected_sequences is None:
         affected_sequences = []
@@ -323,8 +332,10 @@ def insert_audit(
         ),
     )
 
-    conn.commit()
-    conn.close()
+    if connection is None:
+        conn.commit()
+    if connection is None:
+        conn.close()
 
 
 def list_batches():
@@ -441,8 +452,8 @@ def list_audits():
     return result
 
 
-def get_last_record(device_id):
-    conn = get_connection()
+def get_last_record(device_id, connection=None):
+    conn = connection if connection is not None else get_connection()
 
     row = conn.execute(
         """
@@ -455,7 +466,8 @@ def get_last_record(device_id):
         (device_id,),
     ).fetchone()
 
-    conn.close()
+    if connection is None:
+        conn.close()
 
     if not row:
         return None
@@ -500,4 +512,72 @@ def get_stats():
     }
 
 
+
+def process_batch(batch, validator):
+    """同一写事务内完成查重、读可信链尾、验证及持久化，提交后才能返回。"""
+    conn = get_connection()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        device_id = batch.get("device_id") if isinstance(batch, dict) else None
+        batch_id = batch.get("batch_id") if isinstance(batch, dict) else None
+        if not isinstance(device_id, str):
+            device_id = None
+        if not isinstance(batch_id, str):
+            batch_id = None
+
+        def finish(status, reason, affected=None, **extra):
+            response = {
+                "status": status, "reason_code": reason, "device_id": device_id,
+                "batch_id": batch_id, "affected_sequences": affected or [], **extra,
+            }
+            if status != "accepted":
+                insert_audit(device_id, batch_id, status, reason, affected, batch, connection=conn)
+            conn.commit()
+            return response
+
+        if not device_id or not batch_id:
+            return finish("rejected", "INVALID_BATCH_STRUCTURE")
+        registration = get_device(device_id, connection=conn)
+        if not registration:
+            return finish("rejected", "UNKNOWN_DEVICE")
+        existing = get_batch(device_id, batch_id, connection=conn)
+        if existing:
+            try:
+                same_content = canonical_bytes(existing["raw"]) == canonical_bytes(batch)
+            except (TypeError, ValueError):
+                return finish("rejected", "INVALID_BATCH_STRUCTURE")
+            if same_content:
+                return finish("duplicate", "DUPLICATE_BATCH")
+            return finish("rejected", "BATCH_CONTENT_CONFLICT")
+
+        last_record = get_last_record(device_id, connection=conn)
+        previous_hash = last_record["record_hash"] if last_record else "0" * 64
+        start_sequence = last_record["sequence"] + 1 if last_record else 1
+        validation = validator(batch, registration, previous_hash, start_sequence)
+        if not validation["valid"]:
+            return finish(
+                "rejected", validation["reason_code"], validation["affected_sequences"],
+                errors=validation["errors"], record_errors=validation["record_errors"],
+            )
+        # 数值递增与跨批次时间也只能以已接受的历史为基准。
+        if last_record:
+            try:
+                previous_number = int(last_record["batch_id"].rsplit("-", 1)[1])
+                previous_time = datetime.fromisoformat(last_record["record"]["timestamp"])
+            except (KeyError, ValueError, TypeError) as exc:
+                raise RuntimeError("中心已有记录不是最终合同格式，请使用独立测试数据库") from exc
+            if int(batch_id.rsplit("-", 1)[1]) <= previous_number:
+                return finish("rejected", "INVALID_BATCH_SEQUENCE")
+            if datetime.fromisoformat(batch["start_time"]) <= previous_time:
+                return finish("rejected", "INVALID_TIMESTAMP")
+        insert_valid_batch(batch, connection=conn)
+        return finish("accepted", "OK")
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+# 保留原来的导入初始化，兼容已有设备登记脚本；startup 重复调用也安全。
 init_db()

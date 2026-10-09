@@ -1,2 +1,5 @@
 gmssl==3.2.2
-pytest==实际版本号
+fastapi==0.143.0
+httpx==0.28.1
+uvicorn==0.54.0
+pytest==9.1.1

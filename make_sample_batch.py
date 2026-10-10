@@ -73,18 +73,12 @@ def main():
     output = Path(__file__).resolve().parent / "test_data"
     output.mkdir(exist_ok=True)
 
-    files = {
-        "normal_batch.json": batch,
-        "registry_public.json": {
-            device_id: registration,
-        },
-    }
-
-    for filename, content in files.items():
-        (output / filename).write_text(
-            json.dumps(content, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
+    # 公开登记表由 register_devices 单独维护。这里绝不能把七设备登记表
+    # 覆盖成只有 WL-001 的样例，否则中心和网关会丢失其余设备的可信公钥。
+    (output / "normal_batch.json").write_text(
+        json.dumps(batch, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
 
     fingerprint = sm3_hex(bytes.fromhex(public_key))
 
@@ -93,7 +87,8 @@ def main():
     print("记录数量：", batch["count"])
     print("公钥 SM3 指纹：", fingerprint)
     print("标准批次样例检查通过")
-    print("样例目录：", output)
+    print("样例文件：", output / "normal_batch.json")
+    print("公开登记表未改动：", output / "registry_public.json")
 
 
 if __name__ == "__main__":

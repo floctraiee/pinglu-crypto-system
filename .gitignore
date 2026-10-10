@@ -225,3 +225,4 @@ keys/
 *.db-journal
 *.db-wal
 *.db-shm
+.test-device-runner/

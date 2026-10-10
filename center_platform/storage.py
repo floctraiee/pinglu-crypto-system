@@ -4,6 +4,7 @@ from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
 from common_crypto.canonical import canonical_bytes, signed_header
+from common_crypto.sm import sm3_hex
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -30,6 +31,8 @@ def init_db():
             device_type TEXT NOT NULL,
             public_key TEXT NOT NULL,
             fingerprint TEXT,
+            longitude TEXT,
+            latitude TEXT,
             created_at TEXT NOT NULL
         );
 
@@ -78,6 +81,15 @@ def init_db():
         """
     )
 
+    # 旧库没有经纬度列时在此补齐，避免登记公开登记表失败。
+    device_columns = {
+        row["name"] for row in conn.execute("PRAGMA table_info(devices)")
+    }
+
+    for column in ("longitude", "latitude"):
+        if column not in device_columns:
+            conn.execute(f"ALTER TABLE devices ADD COLUMN {column} TEXT")
+
     conn.commit()
     conn.close()
 
@@ -86,24 +98,50 @@ def now_iso():
     return datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds")
 
 
-def register_device(device_id, device_type, public_key, fingerprint=None):
+def register_device(
+    device_id,
+    device_type,
+    public_key,
+    fingerprint=None,
+    longitude=None,
+    latitude=None,
+):
     conn = get_connection()
+
+    if fingerprint is None:
+        # 未显式给指纹时按公钥算一次，方便队长逐台核对登记表。
+        try:
+            fingerprint = sm3_hex(bytes.fromhex(public_key))
+        except (TypeError, ValueError):
+            fingerprint = None
 
     conn.execute(
         """
         INSERT INTO devices
-        (device_id, device_type, public_key, fingerprint, created_at)
-        VALUES (?, ?, ?, ?, ?)
+        (
+            device_id,
+            device_type,
+            public_key,
+            fingerprint,
+            longitude,
+            latitude,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(device_id) DO UPDATE SET
             device_type = excluded.device_type,
             public_key = excluded.public_key,
-            fingerprint = excluded.fingerprint
+            fingerprint = excluded.fingerprint,
+            longitude = excluded.longitude,
+            latitude = excluded.latitude
         """,
         (
             device_id,
             device_type,
             public_key,
             fingerprint,
+            longitude,
+            latitude,
             now_iso(),
         ),
     )
@@ -117,7 +155,14 @@ def get_device(device_id, connection=None):
 
     row = conn.execute(
         """
-        SELECT device_id, device_type, public_key, fingerprint, created_at
+        SELECT
+            device_id,
+            device_type,
+            public_key,
+            fingerprint,
+            longitude,
+            latitude,
+            created_at
         FROM devices
         WHERE device_id = ?
         """,
@@ -135,7 +180,14 @@ def list_devices():
 
     rows = conn.execute(
         """
-        SELECT device_id, device_type, public_key, fingerprint, created_at
+        SELECT
+            device_id,
+            device_type,
+            public_key,
+            fingerprint,
+            longitude,
+            latitude,
+            created_at
         FROM devices
         ORDER BY device_id
         """

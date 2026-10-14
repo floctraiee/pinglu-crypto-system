@@ -1,4 +1,5 @@
 import json
+import os
 import sqlite3
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
@@ -9,8 +10,13 @@ from common_crypto.sm import sm3_hex
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
-DB_PATH = DATA_DIR / "center.db"
 
+# 允许用环境变量切换库文件，便于异机部署与页面实测；默认仍是 data/center.db。
+DB_PATH = Path(
+    os.environ.get("PINGLU_CENTER_DB", str(DATA_DIR / "center.db"))
+)
+
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -565,17 +571,63 @@ def get_stats():
 
 
 
+BATCH_FIELDS = {
+    "version",
+    "device_id",
+    "batch_id",
+    "start_sequence",
+    "end_sequence",
+    "count",
+    "start_time",
+    "end_time",
+    "merkle_root",
+    "records",
+    "signature",
+}
+
+
+def _identify_batch(batch):
+    """尽量取出设备身份，供审计留痕。
+
+    顶层没有 device_id / batch_id 时（例如旧结构或结构不完整的批次），
+    退一步从第一条记录里取，保证审计证据仍能追到设备和批次，而不是留空。
+    """
+    device_id = None
+    batch_id = None
+
+    if isinstance(batch, dict):
+        if isinstance(batch.get("device_id"), str):
+            device_id = batch["device_id"]
+        if isinstance(batch.get("batch_id"), str):
+            batch_id = batch["batch_id"]
+
+        records = batch.get("records")
+
+        if isinstance(records, list) and records and isinstance(records[0], dict):
+            first = records[0]
+            if device_id is None and isinstance(first.get("device_id"), str):
+                device_id = first["device_id"]
+            if batch_id is None and isinstance(first.get("batch_id"), str):
+                batch_id = first["batch_id"]
+
+    return device_id, batch_id
+
+
+def _has_contract_structure(batch):
+    """严格字段检查：批次顶层必须恰好是合同约定的 11 个字段。
+
+    这一步放在查重之前，否则"旧结构 + 相同批次号"会被误判成内容冲突，
+    而不是合同要求的 INVALID_BATCH_STRUCTURE。
+    """
+    return isinstance(batch, dict) and set(batch) == BATCH_FIELDS
+
+
 def process_batch(batch, validator):
     """同一写事务内完成查重、读可信链尾、验证及持久化，提交后才能返回。"""
     conn = get_connection()
     try:
         conn.execute("BEGIN IMMEDIATE")
-        device_id = batch.get("device_id") if isinstance(batch, dict) else None
-        batch_id = batch.get("batch_id") if isinstance(batch, dict) else None
-        if not isinstance(device_id, str):
-            device_id = None
-        if not isinstance(batch_id, str):
-            batch_id = None
+        device_id, batch_id = _identify_batch(batch)
 
         def finish(status, reason, affected=None, **extra):
             response = {
@@ -588,6 +640,9 @@ def process_batch(batch, validator):
             return response
 
         if not device_id or not batch_id:
+            return finish("rejected", "INVALID_BATCH_STRUCTURE")
+        # 严格字段检查放在查重之前：结构不符就是结构错误，不参与内容比对。
+        if not _has_contract_structure(batch):
             return finish("rejected", "INVALID_BATCH_STRUCTURE")
         registration = get_device(device_id, connection=conn)
         if not registration:

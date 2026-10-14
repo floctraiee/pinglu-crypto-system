@@ -226,3 +226,15 @@ keys/
 *.db-wal
 *.db-shm
 .test-device-runner/
+
+# 初始化/清理脚本的备份产物
+backup/
+center_platform/data/init-backup/
+center_platform/data/cleanup-*/
+
+# 验证过程产生的临时目录
+_tmp/
+
+# 实验输出（benchmark 的 CSV 需要提交时才去掉这两行）
+docs/evidence/*.tmp
+*.json.tmp

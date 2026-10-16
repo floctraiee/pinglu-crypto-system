@@ -83,6 +83,7 @@ def main():
     registry = register_devices(args.devices, args.keys_dir, args.registry)
     interval = args.batch_size / args.rate
     print(f"已加载 {len(registry)} 台固定测试设备；rate={args.rate} 条/设备/秒，批间隔={interval:g} 秒")
+    next_round_at = time.monotonic()
     for round_number in range(args.rounds):
         batches = generate_round(registry, args.keys_dir, args.db_path, args.batch_size, args.seed)
         for batch in batches:
@@ -91,8 +92,15 @@ def main():
             for result in flush_pending(args.db_path, registry, args.broker, args.port, args.username, password, args.timeout):
                 print(f"MQTT {result[2]} {result[0]} {result[1]}：{result[3]}")
         if round_number + 1 < args.rounds:
-            time.sleep(interval)
-
+            next_round_at += interval
+            remaining = next_round_at - time.monotonic()
+            if remaining > 0:
+                time.sleep(remaining)
+            else:
+                print(
+                    f"生成调度落后 {-remaining:.2f} 秒，"
+                    "当前处理速度未跟上设定频率"
+                )
 
 if __name__ == "__main__":
     try:

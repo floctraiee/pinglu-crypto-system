@@ -1,0 +1,328 @@
+{
+  "schema": "pinglu-evaluate/1",
+  "evaluated_at": "2026-10-14T17:45:26+08:00",
+  "samples": "C:\\Users\\67\\AppData\\Local\\Temp\\dsh-sv93wY\\dsh_eval\\samples.json",
+  "summary": {
+    "anomaly_total": 11,
+    "anomaly_strict_total": 9,
+    "anomaly_detected": 11,
+    "anomaly_status_hit": 11,
+    "anomaly_reason_hit": 11,
+    "normal_total": 3,
+    "normal_detected": 0,
+    "normal_accepted": 3,
+    "localization_total": 5,
+    "localization_hit": 5,
+    "detection_rate_strict_percent": 100.0,
+    "detection_rate_lenient_percent": 100.0,
+    "reason_match_percent": 100.0,
+    "status_match_percent": 100.0,
+    "localization_accuracy_percent": 100.0,
+    "false_positive_rate_percent": 0.0,
+    "normal_accept_rate_percent": 100.0,
+    "missing_results": 0
+  },
+  "details": [
+    {
+      "case_id": "normal-01",
+      "kind": "normal",
+      "batch_id": "SL-001-000001",
+      "expect_detected": false,
+      "actual_status": "accepted",
+      "actual_reason_code": "OK",
+      "expected_reason_codes": [
+        "OK"
+      ],
+      "status_hit": true,
+      "reason_hit": true,
+      "detected": false,
+      "ambiguous": false,
+      "expected_sequences": null,
+      "actual_sequences": [],
+      "localization_hit": null,
+      "missing_result": false
+    },
+    {
+      "case_id": "normal-02",
+      "kind": "normal",
+      "batch_id": "SL-001-000002",
+      "expect_detected": false,
+      "actual_status": "accepted",
+      "actual_reason_code": "OK",
+      "expected_reason_codes": [
+        "OK"
+      ],
+      "status_hit": true,
+      "reason_hit": true,
+      "detected": false,
+      "ambiguous": false,
+      "expected_sequences": null,
+      "actual_sequences": [],
+      "localization_hit": null,
+      "missing_result": false
+    },
+    {
+      "case_id": "normal-03",
+      "kind": "normal",
+      "batch_id": "SL-001-000003",
+      "expect_detected": false,
+      "actual_status": "accepted",
+      "actual_reason_code": "OK",
+      "expected_reason_codes": [
+        "OK"
+      ],
+      "status_hit": true,
+      "reason_hit": true,
+      "detected": false,
+      "ambiguous": false,
+      "expected_sequences": null,
+      "actual_sequences": [],
+      "localization_hit": null,
+      "missing_result": false
+    },
+    {
+      "case_id": "duplicate-04",
+      "kind": "duplicate",
+      "batch_id": "SL-001-000003",
+      "expect_detected": true,
+      "actual_status": "duplicate",
+      "actual_reason_code": "DUPLICATE_BATCH",
+      "expected_reason_codes": [
+        "DUPLICATE_BATCH"
+      ],
+      "status_hit": true,
+      "reason_hit": true,
+      "detected": true,
+      "ambiguous": false,
+      "expected_sequences": null,
+      "actual_sequences": [],
+      "localization_hit": null,
+      "missing_result": false
+    },
+    {
+      "case_id": "tamper_value-05",
+      "kind": "tamper_value",
+      "batch_id": "SL-001-000005",
+      "expect_detected": true,
+      "actual_status": "rejected",
+      "actual_reason_code": "INVALID_RECORD_HASH",
+      "expected_reason_codes": [
+        "INVALID_RECORD_HASH"
+      ],
+      "status_hit": true,
+      "reason_hit": true,
+      "detected": true,
+      "ambiguous": false,
+      "expected_sequences": [
+        17
+      ],
+      "actual_sequences": [
+        17
+      ],
+      "localization_hit": true,
+      "missing_result": false
+    },
+    {
+      "case_id": "tamper_count-06",
+      "kind": "tamper_count",
+      "batch_id": "SL-001-000006",
+      "expect_detected": true,
+      "actual_status": "rejected",
+      "actual_reason_code": "INVALID_BATCH_RANGE",
+      "expected_reason_codes": [
+        "INVALID_BATCH_RANGE"
+      ],
+      "status_hit": true,
+      "reason_hit": true,
+      "detected": true,
+      "ambiguous": false,
+      "expected_sequences": null,
+      "actual_sequences": [],
+      "localization_hit": null,
+      "missing_result": false
+    },
+    {
+      "case_id": "tamper_previous_hash-07",
+      "kind": "tamper_previous_hash",
+      "batch_id": "SL-001-000007",
+      "expect_detected": true,
+      "actual_status": "rejected",
+      "actual_reason_code": "INVALID_HASH_CHAIN",
+      "expected_reason_codes": [
+        "INVALID_HASH_CHAIN",
+        "INVALID_RECORD_HASH"
+      ],
+      "status_hit": true,
+      "reason_hit": true,
+      "detected": true,
+      "ambiguous": true,
+      "expected_sequences": [
+        17,
+        18
+      ],
+      "actual_sequences": [
+        17,
+        18
+      ],
+      "localization_hit": true,
+      "missing_result": false
+    },
+    {
+      "case_id": "missing_record-08",
+      "kind": "missing_record",
+      "batch_id": "SL-001-000008",
+      "expect_detected": true,
+      "actual_status": "rejected",
+      "actual_reason_code": "INVALID_BATCH_RANGE",
+      "expected_reason_codes": [
+        "INVALID_BATCH_RANGE",
+        "INVALID_HASH_CHAIN",
+        "INVALID_SEQUENCE"
+      ],
+      "status_hit": true,
+      "reason_hit": true,
+      "detected": true,
+      "ambiguous": true,
+      "expected_sequences": [
+        18,
+        19,
+        20
+      ],
+      "actual_sequences": [
+        18,
+        19,
+        20
+      ],
+      "localization_hit": true,
+      "missing_result": false
+    },
+    {
+      "case_id": "forged_signature-09",
+      "kind": "forged_signature",
+      "batch_id": "SL-001-000009",
+      "expect_detected": true,
+      "actual_status": "rejected",
+      "actual_reason_code": "INVALID_SIGNATURE",
+      "expected_reason_codes": [
+        "INVALID_SIGNATURE"
+      ],
+      "status_hit": true,
+      "reason_hit": true,
+      "detected": true,
+      "ambiguous": false,
+      "expected_sequences": null,
+      "actual_sequences": [],
+      "localization_hit": null,
+      "missing_result": false
+    },
+    {
+      "case_id": "recomputed_hash-10",
+      "kind": "recomputed_hash",
+      "batch_id": "SL-001-000010",
+      "expect_detected": true,
+      "actual_status": "rejected",
+      "actual_reason_code": "INVALID_MERKLE_ROOT",
+      "expected_reason_codes": [
+        "INVALID_MERKLE_ROOT"
+      ],
+      "status_hit": true,
+      "reason_hit": true,
+      "detected": true,
+      "ambiguous": false,
+      "expected_sequences": [],
+      "actual_sequences": [],
+      "localization_hit": true,
+      "missing_result": false
+    },
+    {
+      "case_id": "unknown_device-11",
+      "kind": "unknown_device",
+      "batch_id": "XX-999-000011",
+      "expect_detected": true,
+      "actual_status": "rejected",
+      "actual_reason_code": "UNKNOWN_DEVICE",
+      "expected_reason_codes": [
+        "UNKNOWN_DEVICE"
+      ],
+      "status_hit": true,
+      "reason_hit": true,
+      "detected": true,
+      "ambiguous": false,
+      "expected_sequences": null,
+      "actual_sequences": [],
+      "localization_hit": null,
+      "missing_result": false
+    },
+    {
+      "case_id": "sequence_gap-12",
+      "kind": "sequence_gap",
+      "batch_id": "SL-001-000012",
+      "expect_detected": true,
+      "actual_status": "rejected",
+      "actual_reason_code": "INVALID_SEQUENCE",
+      "expected_reason_codes": [
+        "INVALID_SEQUENCE"
+      ],
+      "status_hit": true,
+      "reason_hit": true,
+      "detected": true,
+      "ambiguous": false,
+      "expected_sequences": [
+        66,
+        67,
+        68,
+        69,
+        70
+      ],
+      "actual_sequences": [
+        66,
+        67,
+        68,
+        69,
+        70
+      ],
+      "localization_hit": true,
+      "missing_result": false
+    },
+    {
+      "case_id": "batch_number_replay-13",
+      "kind": "batch_number_replay",
+      "batch_id": "SL-001-000003",
+      "expect_detected": true,
+      "actual_status": "rejected",
+      "actual_reason_code": "BATCH_CONTENT_CONFLICT",
+      "expected_reason_codes": [
+        "BATCH_CONTENT_CONFLICT",
+        "DUPLICATE_BATCH",
+        "INVALID_BATCH_SEQUENCE"
+      ],
+      "status_hit": true,
+      "reason_hit": true,
+      "detected": true,
+      "ambiguous": false,
+      "expected_sequences": null,
+      "actual_sequences": [],
+      "localization_hit": null,
+      "missing_result": false
+    },
+    {
+      "case_id": "extra_field-14",
+      "kind": "extra_field",
+      "batch_id": "SL-001-000014",
+      "expect_detected": true,
+      "actual_status": "rejected",
+      "actual_reason_code": "INVALID_BATCH_STRUCTURE",
+      "expected_reason_codes": [
+        "INVALID_BATCH_STRUCTURE"
+      ],
+      "status_hit": true,
+      "reason_hit": true,
+      "detected": true,
+      "ambiguous": false,
+      "expected_sequences": null,
+      "actual_sequences": [],
+      "localization_hit": null,
+      "missing_result": false
+    }
+  ]
+}

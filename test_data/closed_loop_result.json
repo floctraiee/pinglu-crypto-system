@@ -1,0 +1,74 @@
+{
+  "batches": [
+    {
+      "device_id": "DR-001",
+      "batch_id": "DR-001-000001",
+      "count": 10,
+      "status": "accepted",
+      "reason_code": "OK",
+      "fingerprint": "0e150c34a9a477c2836f19aa5ca5390b62e65c1e42c3e4150e86d5f46f7b4353",
+      "proof_ok": true
+    },
+    {
+      "device_id": "LK-001",
+      "batch_id": "LK-001-000001",
+      "count": 10,
+      "status": "accepted",
+      "reason_code": "OK",
+      "fingerprint": "23cc83d4916328b618b59e4f85aacf712ef873b4a2c53739fd9bc218ac37d6a0",
+      "proof_ok": true
+    },
+    {
+      "device_id": "NM-001",
+      "batch_id": "NM-001-000001",
+      "count": 10,
+      "status": "accepted",
+      "reason_code": "OK",
+      "fingerprint": "2c96729981f5301f89f5bc43a364463022ed6cf39749b4907a864fb5b2035b18",
+      "proof_ok": true
+    },
+    {
+      "device_id": "SB-001",
+      "batch_id": "SB-001-000001",
+      "count": 10,
+      "status": "accepted",
+      "reason_code": "OK",
+      "fingerprint": "99b5e49dd2f80b30a1f7cd52f93f8711f7c25fd5966307ccf546e44096d61b1b",
+      "proof_ok": true
+    },
+    {
+      "device_id": "SL-001",
+      "batch_id": "SL-001-000001",
+      "count": 10,
+      "status": "accepted",
+      "reason_code": "OK",
+      "fingerprint": "ddc4c8c082d10de7aa1067417263482b3bb51df73ede4d668771693383d1f6fa",
+      "proof_ok": true
+    },
+    {
+      "device_id": "WE-001",
+      "batch_id": "WE-001-000001",
+      "count": 10,
+      "status": "accepted",
+      "reason_code": "OK",
+      "fingerprint": "81ed9b1c050933175701139daae52322405edcb42979a6d29784cb5486f6c4d9",
+      "proof_ok": true
+    },
+    {
+      "device_id": "WL-001",
+      "batch_id": "WL-001-000001",
+      "count": 10,
+      "status": "accepted",
+      "reason_code": "OK",
+      "fingerprint": "bf41f4821258a959730e1975fc2f618e3fa25a2c256f6c36b37ed38e2d3aa885",
+      "proof_ok": true
+    }
+  ],
+  "stats": {
+    "devices": 7,
+    "batches": 7,
+    "records": 70,
+    "accepted_batches": 7,
+    "audits": 1
+  }
+}

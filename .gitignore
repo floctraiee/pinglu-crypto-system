@@ -238,3 +238,24 @@ _tmp/
 # 实验输出（benchmark 的 CSV 需要提交时才去掉这两行）
 docs/evidence/*.tmp
 *.json.tmp
+
+# 迁移准备资料，含密钥副本（远端已约定忽略）
+/test_data/migration_wl900_to_wl001/
+
+# 一次性修复脚本与临时排查脚本
+_*.py
+fix_db.py
+
+# 根目录旧登记表副本，正本是 test_data/registry_public.json
+/registry_public.json
+
+# 打包与报告大文件（需要入库时删掉对应行）
+*.zip
+center_platform/data/
+报告图_初稿/
+报告图_定稿/
+*.docx
+
+# README 本地转存（内容已在 git 历史里）
+/docs/readme-leader-*.md
+

@@ -1,0 +1,42 @@
+{
+  "generated_at": "2026-10-14T17:20:00+08:00",
+  "note": "验证脚本构造的网关只读状态样例；真实文件由 B 端 edge_gateway 写出。",
+  "devices": [
+    {
+      "device_id": "WL-001",
+      "device_type": "water_level",
+      "cached_batches": 0,
+      "cached_records": 0,
+      "resend_done": 5,
+      "resend_pending": 0,
+      "break_sequence": 25,
+      "last_gateway_received_at": "2026-10-14T17:18:40+08:00",
+      "last_center_ack_at": "2026-10-14T17:18:41+08:00",
+      "note": "已全部补传"
+    },
+    {
+      "device_id": "SL-001",
+      "device_type": "slope",
+      "cached_batches": 3,
+      "cached_records": 30,
+      "resend_done": 2,
+      "resend_pending": 3,
+      "break_sequence": 21,
+      "last_gateway_received_at": "2026-10-14T17:12:05+08:00",
+      "last_center_ack_at": "2026-10-14T17:12:09+08:00",
+      "note": "断网期间缓存，正在补传"
+    },
+    {
+      "device_id": "DR-001",
+      "device_type": "drone",
+      "cached_batches": 1,
+      "cached_records": 10,
+      "resend_done": 0,
+      "resend_pending": 1,
+      "break_sequence": 11,
+      "last_gateway_received_at": "2026-10-14T17:05:12+08:00",
+      "last_center_ack_at": null,
+      "note": "中心离线，等待重连"
+    }
+  ]
+}

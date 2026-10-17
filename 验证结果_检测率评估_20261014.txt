@@ -1,0 +1,54 @@
+﻿逐个提交到中心 http://127.0.0.1:8131 …
+  normal-01                  → accepted / OK
+  normal-02                  → accepted / OK
+  normal-03                  → accepted / OK
+  duplicate-04               → duplicate / DUPLICATE_BATCH
+  tamper_value-05            → rejected / INVALID_RECORD_HASH
+  tamper_count-06            → rejected / INVALID_BATCH_RANGE
+  tamper_previous_hash-07    → rejected / INVALID_HASH_CHAIN
+  missing_record-08          → rejected / INVALID_BATCH_RANGE
+  forged_signature-09        → rejected / INVALID_SIGNATURE
+  recomputed_hash-10         → rejected / INVALID_MERKLE_ROOT
+  unknown_device-11          → rejected / UNKNOWN_DEVICE
+  sequence_gap-12            → rejected / INVALID_SEQUENCE
+  batch_number_replay-13     → rejected / BATCH_CONTENT_CONFLICT
+  extra_field-14             → rejected / INVALID_BATCH_STRUCTURE
+已保存结果 → C:\Users\67\AppData\Local\Temp\dsh-sv93wY\dsh_eval\results.json
+
+==================================================================================
+系统输出与真实标签对比
+schema=pinglu-eval-samples/1  设备=SL-001  用例数=14
+==================================================================================
+
+用例                        类型                    期望      实际状态        原因码                       命中
+----------------------------------------------------------------------------------
+normal-01                 normal                放行      accepted    OK                        OK
+normal-02                 normal                放行      accepted    OK                        OK
+normal-03                 normal                放行      accepted    OK                        OK
+duplicate-04              duplicate             拦截      duplicate   DUPLICATE_BATCH           OK
+tamper_value-05           tamper_value          拦截      rejected    INVALID_RECORD_HASH       OK
+tamper_count-06           tamper_count          拦截      rejected    INVALID_BATCH_RANGE       OK
+tamper_previous_hash-07   tamper_previous_hash  拦截      rejected    INVALID_HASH_CHAIN        OK
+missing_record-08         missing_record        拦截      rejected    INVALID_BATCH_RANGE       OK
+forged_signature-09       forged_signature      拦截      rejected    INVALID_SIGNATURE         OK
+recomputed_hash-10        recomputed_hash       拦截      rejected    INVALID_MERKLE_ROOT       OK
+unknown_device-11         unknown_device        拦截      rejected    UNKNOWN_DEVICE            OK
+sequence_gap-12           sequence_gap          拦截      rejected    INVALID_SEQUENCE          OK
+batch_number_replay-13    batch_number_replay   拦截      rejected    BATCH_CONTENT_CONFLICT    OK
+extra_field-14            extra_field           拦截      rejected    INVALID_BATCH_STRUCTURE   OK
+
+----------------------------------------------------------------------------------
+指标（口径见文件头注释）
+----------------------------------------------------------------------------------
+  异常样本总数                 11
+  其中严格口径（排除 ambiguous） 9
+  严格检测率                   100.00%
+  宽松检测率（含 ambiguous）    100.00%
+  状态判定命中率               100.00%
+  原因码命中率                 100.00%
+  定位准确率（序号集合全对）    100.00%（5/5）
+  误报率                       0.00%（0/3）
+  正常样本放行率               100.00%
+
+明细 CSV 已写出：D:\比赛项目\pinglu-crypto-system-main\验证结果_检测率评估_20261014.csv
+汇总 JSON 已写出：D:\比赛项目\pinglu-crypto-system-main\验证结果_检测率评估_20261014.json

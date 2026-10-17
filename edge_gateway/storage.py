@@ -125,7 +125,7 @@ def get_connection():
     conn = sqlite3.connect(str(path), timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode = WAL")
-    conn.execute("PRAGMA synchronous = FULL")
+    conn.execute("PRAGMA synchronous = NORMAL")
     return conn
 
 

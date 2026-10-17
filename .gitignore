@@ -229,3 +229,11 @@ keys/
 
 # 迁移准备资料，含私钥副本
 /test_data/migration_wl900_to_wl001/
+# 异常注入生成物（可由 tests/inject_anomalies.py 重新生成，不入库）
+tests/anomaly_cases/
+tests/_anomaly_scratch/
+tests/_probe_cases/
+
+# pytest 临时目录
+.pytest_tmp/
+pytest-cache-files-*/

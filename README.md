@@ -30,6 +30,9 @@ python -m device_simulator.publish --batch-file .\test_data\verified_wl001\norma
 
 dry-run不连接Broker、不发送消息，显示未连接Broker属于预期行为。
 
+运行前请激活项目虚拟环境；Windows也可将命令开头的
+python 替换为 .\.venv\Scripts\python.exe。
+
 ### MQTT发布
 
 先确认B已启动网关、加载配套公开登记表，并核实Broker当前IP。

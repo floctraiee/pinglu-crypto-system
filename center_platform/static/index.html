@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>平陆运河多源感知数据国密可信采集与篡改溯源系统 · 中心平台</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="headline">
+      <h1>平陆运河多源感知数据 · 国密可信采集与篡改溯源系统</h1>
+      <div class="sub">
+        中心平台 · 独立验证与溯源查询 ·
+        <a href="/docs">接口文档</a>
+        <a href="/health">/health</a>
+        <a href="/stats">/stats</a>
+        <a href="/devices">/devices</a>
+        <a href="/batches">/batches</a>
+        <a href="/records">/records</a>
+        <a href="/audits">/audits</a>
+        <a href="/offline-status">/offline-status</a>
+        <a href="/performance">/performance</a>
+      </div>
+    </div>
+    <div class="conn" id="conn">
+      <span class="dot" id="conn-dot"></span>
+      <span id="conn-text">正在连接中心…</span>
+    </div>
+  </header>
+
+  <div class="banner" id="stale-banner" hidden>
+    <b>中心连接中断</b>
+    <span id="stale-detail"></span>
+    <span class="muted">以下数字是断网前最后一次成功读取的快照，不代表实时状态。</span>
+  </div>
+
+  <!-- ① 总览 -->
+  <section class="panel" id="panel-overview">
+    <h2>① 总览 · 数据流与验证结果</h2>
+    <div class="flow" id="flow"></div>
+    <div class="cards" id="stats">
+      <div class="card"><b id="s-devices">-</b><span>已登记设备</span></div>
+      <div class="card"><b id="s-batches">-</b><span>已收批次</span></div>
+      <div class="card"><b id="s-accepted">-</b><span>通过批次</span></div>
+      <div class="card"><b id="s-records">-</b><span>已存记录</span></div>
+      <div class="card"><b id="s-audits">-</b><span>审计事件</span></div>
+      <div class="card"><b id="s-types">-</b><span>覆盖设备类型</span></div>
+    </div>
+    <div class="verify-line" id="verify-line"></div>
+    <div class="muted small">数据来源：中心 SQLite（GET /stats、/devices、/batches、/audits），数字随接口返回变化。</div>
+  </section>
+
+  <!-- ② 七类感知数据 -->
+  <section class="panel" id="panel-types">
+    <h2>② 七类感知数据 · 每类设备量与最新入库记录</h2>
+    <div class="toolbar">
+      <label>设备类型
+        <select id="filter-type"><option value="">全部</option></select>
+      </label>
+      <label>设备
+        <select id="filter-device"><option value="">全部</option></select>
+      </label>
+      <label>批次
+        <select id="filter-batch"><option value="">全部</option></select>
+      </label>
+      <button type="button" id="btn-reset">重置筛选</button>
+      <span class="muted small" id="types-count"></span>
+    </div>
+    <div class="type-grid" id="type-grid"></div>
+  </section>
+
+  <!-- ③ 异常审计 -->
+  <section class="panel" id="panel-audits">
+    <h2>③ 异常审计 · 拒绝批次不混进正常数据列表</h2>
+    <div class="cards compact" id="audit-cards">
+      <div class="card"><b id="a-rejected">-</b><span>rejected</span></div>
+      <div class="card"><b id="a-duplicate">-</b><span>duplicate</span></div>
+      <div class="card"><b id="a-total">-</b><span>审计总数</span></div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:64px">审计ID</th>
+            <th style="width:96px">设备 ID</th>
+            <th style="width:170px">批次 ID</th>
+            <th style="width:130px">记录序号 / 缺失区间</th>
+            <th style="width:190px">异常原因（reason_code）</th>
+            <th style="width:150px">边缘判定</th>
+            <th style="width:150px">中心复核</th>
+            <th style="width:170px">时间</th>
+            <th style="width:88px">原文</th>
+          </tr>
+        </thead>
+        <tbody id="audits"><tr><td colspan="9">加载中…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="muted small" id="audit-note"></div>
+  </section>
+
+  <!-- ④ 批次细节与 Merkle 证明 -->
+  <section class="panel" id="panel-proof">
+    <h2>④ 批次细节与 Merkle 证明 · 真实批次查询</h2>
+    <div class="toolbar">
+      <label>批次
+        <select id="proof-batch"><option value="">— 选择批次 —</option></select>
+      </label>
+      <label>记录序号
+        <select id="proof-sequence"><option value="">— 选择序号 —</option></select>
+      </label>
+      <button type="button" id="btn-proof">查询证明</button>
+    </div>
+    <div id="proof-result" class="proof-result">
+      <div class="muted">选择一条已入库的合法记录，显示原始摘要、Merkle 路径、签名根与 SM2 验签结果。</div>
+    </div>
+  </section>
+
+  <!-- ⑤ 离线恢复 -->
+  <section class="panel" id="panel-offline">
+    <h2>⑤ 离线恢复 · 缓存数、断点与补传进度</h2>
+    <div class="cards compact" id="offline-cards">
+      <div class="card"><b id="o-cached">-</b><span>缓存批次数</span></div>
+      <div class="card"><b id="o-records">-</b><span>缓存记录数</span></div>
+      <div class="card"><b id="o-done">-</b><span>已补传批次</span></div>
+      <div class="card"><b id="o-pending">-</b><span>待补传批次</span></div>
+      <div class="card"><b id="o-progress">-</b><span>补传进度</span></div>
+      <div class="card"><b id="o-p95">-</b><span>实时延迟 P95 (ms)</span></div>
+    </div>
+    <div class="progress"><div class="bar" id="o-bar" style="width:0%"></div></div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:96px">设备 ID</th>
+            <th style="width:120px">设备类型</th>
+            <th style="width:96px">缓存批次</th>
+            <th style="width:96px">缓存记录</th>
+            <th style="width:96px">已补传</th>
+            <th style="width:96px">待补传</th>
+            <th style="width:120px">断点序号</th>
+            <th style="width:170px">待补传序号区间</th>
+            <th style="width:180px">最近网关接收时间</th>
+          </tr>
+        </thead>
+        <tbody id="offline"><tr><td colspan="9">加载中…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="muted small" id="offline-note"></div>
+  </section>
+
+  <!-- ⑥ 性能对比 -->
+  <section class="panel" id="panel-performance">
+    <h2>⑥ 性能对比 · 签名批次大小对照</h2>
+    <div class="perf-scale">
+      <div class="scale" id="perf-scale"></div>
+      <div class="muted small" id="perf-meta"></div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>批次大小</th>
+            <th>批次数</th>
+            <th>签名次数</th>
+            <th>签名总耗时(ms)</th>
+            <th>签名均值(ms)</th>
+            <th>签名 P95(ms)</th>
+            <th>验签次数</th>
+            <th>验签均值(ms)</th>
+            <th>验签 P95(ms)</th>
+            <th>报文大小(B)</th>
+            <th>记录数</th>
+          </tr>
+        </thead>
+        <tbody id="performance"><tr><td colspan="11">加载中…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="muted small" id="perf-note"></div>
+  </section>
+
+  <footer class="muted small">
+    <span id="last-update">—</span> ·
+    刷新周期 5 秒 ·
+    页面内容来自中心真实接口与 SQLite，不使用写死的演示文本。
+  </footer>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

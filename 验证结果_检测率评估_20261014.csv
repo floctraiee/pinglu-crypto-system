@@ -1,0 +1,15 @@
+﻿case_id,kind,batch_id,expect_detected,actual_status,actual_reason_code,expected_reason_codes,status_hit,reason_hit,detected,ambiguous,expected_sequences,actual_sequences,localization_hit,missing_result
+normal-01,normal,SL-001-000001,False,accepted,OK,OK,True,True,False,False,null,[],,False
+normal-02,normal,SL-001-000002,False,accepted,OK,OK,True,True,False,False,null,[],,False
+normal-03,normal,SL-001-000003,False,accepted,OK,OK,True,True,False,False,null,[],,False
+duplicate-04,duplicate,SL-001-000003,True,duplicate,DUPLICATE_BATCH,DUPLICATE_BATCH,True,True,True,False,null,[],,False
+tamper_value-05,tamper_value,SL-001-000005,True,rejected,INVALID_RECORD_HASH,INVALID_RECORD_HASH,True,True,True,False,[17],[17],True,False
+tamper_count-06,tamper_count,SL-001-000006,True,rejected,INVALID_BATCH_RANGE,INVALID_BATCH_RANGE,True,True,True,False,null,[],,False
+tamper_previous_hash-07,tamper_previous_hash,SL-001-000007,True,rejected,INVALID_HASH_CHAIN,INVALID_HASH_CHAIN|INVALID_RECORD_HASH,True,True,True,True,"[17, 18]","[17, 18]",True,False
+missing_record-08,missing_record,SL-001-000008,True,rejected,INVALID_BATCH_RANGE,INVALID_BATCH_RANGE|INVALID_HASH_CHAIN|INVALID_SEQUENCE,True,True,True,True,"[18, 19, 20]","[18, 19, 20]",True,False
+forged_signature-09,forged_signature,SL-001-000009,True,rejected,INVALID_SIGNATURE,INVALID_SIGNATURE,True,True,True,False,null,[],,False
+recomputed_hash-10,recomputed_hash,SL-001-000010,True,rejected,INVALID_MERKLE_ROOT,INVALID_MERKLE_ROOT,True,True,True,False,[],[],True,False
+unknown_device-11,unknown_device,XX-999-000011,True,rejected,UNKNOWN_DEVICE,UNKNOWN_DEVICE,True,True,True,False,null,[],,False
+sequence_gap-12,sequence_gap,SL-001-000012,True,rejected,INVALID_SEQUENCE,INVALID_SEQUENCE,True,True,True,False,"[66, 67, 68, 69, 70]","[66, 67, 68, 69, 70]",True,False
+batch_number_replay-13,batch_number_replay,SL-001-000003,True,rejected,BATCH_CONTENT_CONFLICT,BATCH_CONTENT_CONFLICT|DUPLICATE_BATCH|INVALID_BATCH_SEQUENCE,True,True,True,False,null,[],,False
+extra_field-14,extra_field,SL-001-000014,True,rejected,INVALID_BATCH_STRUCTURE,INVALID_BATCH_STRUCTURE,True,True,True,False,null,[],,False

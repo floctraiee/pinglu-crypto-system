@@ -1,0 +1,226 @@
+{
+  "stats_before": {
+    "devices": 7,
+    "batches": 6,
+    "records": 60,
+    "accepted_batches": 6,
+    "audits": 24
+  },
+  "stats_after": {
+    "devices": 7,
+    "batches": 8,
+    "records": 70,
+    "accepted_batches": 8,
+    "audits": 33
+  },
+  "audits_added": 9,
+  "cases": [
+    {
+      "编号": "异常-01",
+      "名称": "原样重复提交",
+      "输入": "与已入库批次逐字节相同",
+      "期望": "duplicate / DUPLICATE_BATCH",
+      "实际": {
+        "status": "duplicate",
+        "reason_code": "DUPLICATE_BATCH",
+        "device_id": "SL-001",
+        "batch_id": "SL-001-000001",
+        "affected_sequences": []
+      }
+    },
+    {
+      "编号": "异常-02",
+      "名称": "篡改测量值",
+      "输入": "第 7 条 displacement_mm 改为 999.99，摘要未重算",
+      "期望": "rejected / INVALID_RECORD_HASH",
+      "实际": {
+        "status": "rejected",
+        "reason_code": "INVALID_RECORD_HASH",
+        "device_id": "SL-001",
+        "batch_id": "SL-001-000002",
+        "affected_sequences": [
+          7
+        ],
+        "errors": [
+          "记录摘要不匹配"
+        ],
+        "record_errors": [
+          {
+            "index": 1,
+            "sequence": 7,
+            "reasons": [
+              "记录摘要不匹配"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "编号": "异常-03",
+      "名称": "删除第 7 条记录",
+      "输入": "删掉中间一条，起止序号与数量随之对不上",
+      "期望": "rejected / INVALID_BATCH_RANGE",
+      "实际": {
+        "status": "rejected",
+        "reason_code": "INVALID_BATCH_RANGE",
+        "device_id": "SL-001",
+        "batch_id": "SL-001-000003",
+        "affected_sequences": [
+          8,
+          9,
+          10
+        ],
+        "errors": [
+          "批次数量或序号范围与记录不一致",
+          "序号与接收端可信下一序号不一致",
+          "摘要链断开",
+          "序号与接收端可信下一序号不一致",
+          "序号与接收端可信下一序号不一致",
+          "Merkle 根与记录摘要不一致"
+        ],
+        "record_errors": [
+          {
+            "index": 1,
+            "sequence": 8,
+            "reasons": [
+              "序号与接收端可信下一序号不一致",
+              "摘要链断开"
+            ]
+          },
+          {
+            "index": 2,
+            "sequence": 9,
+            "reasons": [
+              "序号与接收端可信下一序号不一致"
+            ]
+          },
+          {
+            "index": 3,
+            "sequence": 10,
+            "reasons": [
+              "序号与接收端可信下一序号不一致"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "编号": "异常-04",
+      "名称": "伪造签名",
+      "输入": "内容自洽、签名整段替换为全 0",
+      "期望": "rejected / INVALID_SIGNATURE",
+      "实际": {
+        "status": "rejected",
+        "reason_code": "INVALID_SIGNATURE",
+        "device_id": "SL-001",
+        "batch_id": "SL-001-000004",
+        "affected_sequences": [],
+        "errors": [
+          "SM2 验签失败"
+        ],
+        "record_errors": []
+      }
+    },
+    {
+      "编号": "异常-05",
+      "名称": "签名的 Merkle 根与记录不符",
+      "输入": "记录与链都自洽，只把 merkle_root 改成全 0 后用真实私钥签名",
+      "期望": "rejected / INVALID_MERKLE_ROOT",
+      "实际": {
+        "status": "rejected",
+        "reason_code": "INVALID_MERKLE_ROOT",
+        "device_id": "SL-001",
+        "batch_id": "SL-001-000005",
+        "affected_sequences": [],
+        "errors": [
+          "Merkle 根与记录摘要不一致"
+        ],
+        "record_errors": []
+      }
+    },
+    {
+      "编号": "异常-05b",
+      "名称": "改值后重算摘要但不修链",
+      "输入": "第 7 条改值并重算 record_hash，第 8 条的 previous_hash 因此对不上",
+      "期望": "rejected / INVALID_HASH_CHAIN",
+      "实际": {
+        "status": "rejected",
+        "reason_code": "INVALID_HASH_CHAIN",
+        "device_id": "SL-001",
+        "batch_id": "SL-001-000006",
+        "affected_sequences": [
+          8
+        ],
+        "errors": [
+          "摘要链断开",
+          "Merkle 根与记录摘要不一致"
+        ],
+        "record_errors": [
+          {
+            "index": 2,
+            "sequence": 8,
+            "reasons": [
+              "摘要链断开"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "编号": "异常-05c",
+      "名称": "只改末条记录摘要（链不受影响）",
+      "输入": "末条改值并重算 record_hash，前面链仍然连续，只剩下 Merkle 根对不上",
+      "期望": "rejected / INVALID_MERKLE_ROOT",
+      "实际": {
+        "status": "rejected",
+        "reason_code": "INVALID_MERKLE_ROOT",
+        "device_id": "SL-001",
+        "batch_id": "SL-001-000007",
+        "affected_sequences": [],
+        "errors": [
+          "Merkle 根与记录摘要不一致"
+        ],
+        "record_errors": []
+      }
+    },
+    {
+      "编号": "异常-06",
+      "名称": "未登记设备提交",
+      "输入": "device_id 改为未登记的 XX-999，结构自洽、签名有效",
+      "期望": "rejected / UNKNOWN_DEVICE",
+      "实际": {
+        "status": "rejected",
+        "reason_code": "UNKNOWN_DEVICE",
+        "device_id": "XX-999",
+        "batch_id": "XX-999-000001",
+        "affected_sequences": []
+      }
+    },
+    {
+      "编号": "异常-07",
+      "名称": "历史重放：同批次号不同内容",
+      "输入": "沿用已入库的批次号，改一条测量值并重签",
+      "期望": "rejected / BATCH_CONTENT_CONFLICT",
+      "实际": {
+        "status": "rejected",
+        "reason_code": "BATCH_CONTENT_CONFLICT",
+        "device_id": "SL-001",
+        "batch_id": "SL-001-000001",
+        "affected_sequences": []
+      }
+    },
+    {
+      "编号": "对照-08",
+      "名称": "接着链尾的第二批（应当通过）",
+      "输入": "序号 6~10，previous_hash 接中心链尾",
+      "期望": "accepted / OK",
+      "实际": {
+        "status": "accepted",
+        "reason_code": "OK",
+        "device_id": "SL-001",
+        "batch_id": "SL-001-000010",
+        "affected_sequences": []
+      }
+    }
+  ]
+}

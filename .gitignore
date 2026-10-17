@@ -227,6 +227,7 @@ keys/
 *.db-shm
 .test-device-runner/
 
+<<<<<<< HEAD
 # 迁移准备资料，含私钥副本
 /test_data/migration_wl900_to_wl001/
 # 异常注入生成物（可由 tests/inject_anomalies.py 重新生成，不入库）
@@ -239,3 +240,39 @@ tests/_probe_cases/
 pytest-cache-files-*/
 pytest-of-*/
 /test_data/perf_100/
+=======
+# 初始化/清理脚本的备份产物
+backup/
+center_platform/data/init-backup/
+center_platform/data/cleanup-*/
+
+# 验证过程产生的临时目录
+_tmp/
+
+# 实验输出（benchmark 的 CSV 需要提交时才去掉这两行）
+docs/evidence/*.tmp
+*.json.tmp
+
+# 迁移准备资料，含密钥副本（远端已约定忽略）
+/test_data/migration_wl900_to_wl001/
+
+# 一次性修复脚本与临时排查脚本
+_*.py
+fix_db.py
+
+# 根目录旧登记表副本，正本是 test_data/registry_public.json
+/registry_public.json
+
+# 打包与报告大文件（需要入库时删掉对应行）
+*.zip
+center_platform/data/
+报告图_初稿/
+报告图_定稿/
+*.docx
+
+# README 本地转存（内容已在 git 历史里）
+/docs/readme-leader-*.md
+
+# 离线交接包（git bundle），不进版本库
+*.bundle
+>>>>>>> origin/main

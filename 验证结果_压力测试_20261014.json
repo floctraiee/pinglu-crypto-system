@@ -1,0 +1,66 @@
+{
+  "label": "目标规模-100台30分钟-每批20条",
+  "started_at": "2026-10-14T17:59:02+08:00",
+  "finished_at": "2026-10-14T18:00:10+08:00",
+  "environment": {
+    "python": "3.14.6",
+    "platform": "Windows-11-10.0.26100-SP0",
+    "machine": "AMD64",
+    "cpu_count": 32
+  },
+  "parameters": {
+    "devices": 7,
+    "minutes": 30.0,
+    "rate": 1.0,
+    "batch_size": 20,
+    "time_scale": 1.0,
+    "url": "http://127.0.0.1:8141",
+    "submitted": true
+  },
+  "target_scale": {
+    "records_per_device": 1800,
+    "batches_per_device": 90,
+    "device_target": 100,
+    "minutes_target": 30,
+    "records_target": 180000
+  },
+  "generated_records": 12600,
+  "generate_wall_seconds": 28.46,
+  "sign_net_seconds": 28.46,
+  "gateway_received_batches": null,
+  "gateway_received_note": "B 端边缘网关未在本脚本链路内；走 --url 网关地址并由网关写出只读状态后，才能填 B 端接收数与 gateway_received_at→中心验证完成的实时 P95。",
+  "center_accepted_batches": 630,
+  "center_duplicate_batches": 0,
+  "center_rejected_batches": 0,
+  "transport_errors": 0,
+  "center_stored_records": 12600,
+  "center_db_stats": {
+    "devices": 8,
+    "batches": 630,
+    "records": 12600,
+    "accepted_batches": 630,
+    "audits": 0
+  },
+  "center_latency_ms": {
+    "count": 630,
+    "mean": 63.19,
+    "p50": 64.48,
+    "p95": 75.45,
+    "p99": 78.38,
+    "max": 82.09
+  },
+  "center_latency_abnormal_ms": {
+    "count": 0,
+    "mean": null,
+    "p50": null,
+    "p95": null,
+    "p99": null,
+    "max": null
+  },
+  "submit_wall_seconds": 39.88,
+  "wall_seconds": 68.34,
+  "throughput_batches_per_second": 15.8,
+  "reason_codes": {
+    "OK": 630
+  }
+}

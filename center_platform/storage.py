@@ -1,15 +1,22 @@
 import json
+import os
 import sqlite3
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
 from common_crypto.canonical import canonical_bytes, signed_header
+from common_crypto.sm import sm3_hex
 
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
-DB_PATH = DATA_DIR / "center.db"
 
+# 允许用环境变量切换库文件，便于异机部署与页面实测；默认仍是 data/center.db。
+DB_PATH = Path(
+    os.environ.get("PINGLU_CENTER_DB", str(DATA_DIR / "center.db"))
+)
+
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -30,6 +37,8 @@ def init_db():
             device_type TEXT NOT NULL,
             public_key TEXT NOT NULL,
             fingerprint TEXT,
+            longitude TEXT,
+            latitude TEXT,
             created_at TEXT NOT NULL
         );
 
@@ -78,6 +87,15 @@ def init_db():
         """
     )
 
+    # 旧库没有经纬度列时在此补齐，避免登记公开登记表失败。
+    device_columns = {
+        row["name"] for row in conn.execute("PRAGMA table_info(devices)")
+    }
+
+    for column in ("longitude", "latitude"):
+        if column not in device_columns:
+            conn.execute(f"ALTER TABLE devices ADD COLUMN {column} TEXT")
+
     conn.commit()
     conn.close()
 
@@ -86,24 +104,50 @@ def now_iso():
     return datetime.now(timezone(timedelta(hours=8))).isoformat(timespec="seconds")
 
 
-def register_device(device_id, device_type, public_key, fingerprint=None):
+def register_device(
+    device_id,
+    device_type,
+    public_key,
+    fingerprint=None,
+    longitude=None,
+    latitude=None,
+):
     conn = get_connection()
+
+    if fingerprint is None:
+        # 未显式给指纹时按公钥算一次，方便队长逐台核对登记表。
+        try:
+            fingerprint = sm3_hex(bytes.fromhex(public_key))
+        except (TypeError, ValueError):
+            fingerprint = None
 
     conn.execute(
         """
         INSERT INTO devices
-        (device_id, device_type, public_key, fingerprint, created_at)
-        VALUES (?, ?, ?, ?, ?)
+        (
+            device_id,
+            device_type,
+            public_key,
+            fingerprint,
+            longitude,
+            latitude,
+            created_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(device_id) DO UPDATE SET
             device_type = excluded.device_type,
             public_key = excluded.public_key,
-            fingerprint = excluded.fingerprint
+            fingerprint = excluded.fingerprint,
+            longitude = excluded.longitude,
+            latitude = excluded.latitude
         """,
         (
             device_id,
             device_type,
             public_key,
             fingerprint,
+            longitude,
+            latitude,
             now_iso(),
         ),
     )
@@ -117,7 +161,14 @@ def get_device(device_id, connection=None):
 
     row = conn.execute(
         """
-        SELECT device_id, device_type, public_key, fingerprint, created_at
+        SELECT
+            device_id,
+            device_type,
+            public_key,
+            fingerprint,
+            longitude,
+            latitude,
+            created_at
         FROM devices
         WHERE device_id = ?
         """,
@@ -135,7 +186,14 @@ def list_devices():
 
     rows = conn.execute(
         """
-        SELECT device_id, device_type, public_key, fingerprint, created_at
+        SELECT
+            device_id,
+            device_type,
+            public_key,
+            fingerprint,
+            longitude,
+            latitude,
+            created_at
         FROM devices
         ORDER BY device_id
         """
@@ -513,17 +571,63 @@ def get_stats():
 
 
 
+BATCH_FIELDS = {
+    "version",
+    "device_id",
+    "batch_id",
+    "start_sequence",
+    "end_sequence",
+    "count",
+    "start_time",
+    "end_time",
+    "merkle_root",
+    "records",
+    "signature",
+}
+
+
+def _identify_batch(batch):
+    """尽量取出设备身份，供审计留痕。
+
+    顶层没有 device_id / batch_id 时（例如旧结构或结构不完整的批次），
+    退一步从第一条记录里取，保证审计证据仍能追到设备和批次，而不是留空。
+    """
+    device_id = None
+    batch_id = None
+
+    if isinstance(batch, dict):
+        if isinstance(batch.get("device_id"), str):
+            device_id = batch["device_id"]
+        if isinstance(batch.get("batch_id"), str):
+            batch_id = batch["batch_id"]
+
+        records = batch.get("records")
+
+        if isinstance(records, list) and records and isinstance(records[0], dict):
+            first = records[0]
+            if device_id is None and isinstance(first.get("device_id"), str):
+                device_id = first["device_id"]
+            if batch_id is None and isinstance(first.get("batch_id"), str):
+                batch_id = first["batch_id"]
+
+    return device_id, batch_id
+
+
+def _has_contract_structure(batch):
+    """严格字段检查：批次顶层必须恰好是合同约定的 11 个字段。
+
+    这一步放在查重之前，否则"旧结构 + 相同批次号"会被误判成内容冲突，
+    而不是合同要求的 INVALID_BATCH_STRUCTURE。
+    """
+    return isinstance(batch, dict) and set(batch) == BATCH_FIELDS
+
+
 def process_batch(batch, validator):
     """同一写事务内完成查重、读可信链尾、验证及持久化，提交后才能返回。"""
     conn = get_connection()
     try:
         conn.execute("BEGIN IMMEDIATE")
-        device_id = batch.get("device_id") if isinstance(batch, dict) else None
-        batch_id = batch.get("batch_id") if isinstance(batch, dict) else None
-        if not isinstance(device_id, str):
-            device_id = None
-        if not isinstance(batch_id, str):
-            batch_id = None
+        device_id, batch_id = _identify_batch(batch)
 
         def finish(status, reason, affected=None, **extra):
             response = {
@@ -536,6 +640,9 @@ def process_batch(batch, validator):
             return response
 
         if not device_id or not batch_id:
+            return finish("rejected", "INVALID_BATCH_STRUCTURE")
+        # 严格字段检查放在查重之前：结构不符就是结构错误，不参与内容比对。
+        if not _has_contract_structure(batch):
             return finish("rejected", "INVALID_BATCH_STRUCTURE")
         registration = get_device(device_id, connection=conn)
         if not registration:

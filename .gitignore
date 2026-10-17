@@ -238,3 +238,4 @@ tests/_probe_cases/
 .pytest_tmp/
 pytest-cache-files-*/
 pytest-of-*/
+/test_data/perf_100/

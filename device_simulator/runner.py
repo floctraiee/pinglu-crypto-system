@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 """多设备模拟运行入口：先持久化生成，再可选地按设备顺序发送待发批次。"""
 import argparse
 import os
@@ -65,6 +66,13 @@ def parse_args():
     parser.add_argument("--timeout", type=int, default=15)
     return parser.parse_args()
 
+def print_mqtt_results(results):
+    """显示发送结果；后台异常由主线程读取并报告。"""
+    for result in results:
+        print(
+            f"MQTT {result[2]} {result[0]} "
+            f"{result[1]}：{result[3]}"
+        )
 
 def main():
     args = parse_args()
@@ -84,23 +92,72 @@ def main():
     interval = args.batch_size / args.rate
     print(f"已加载 {len(registry)} 台固定测试设备；rate={args.rate} 条/设备/秒，批间隔={interval:g} 秒")
     next_round_at = time.monotonic()
-    for round_number in range(args.rounds):
-        batches = generate_round(registry, args.keys_dir, args.db_path, args.batch_size, args.seed)
-        for batch in batches:
-            print(f"已生成并保存 {batch['device_id']} {batch['batch_id']} seq {batch['start_sequence']}~{batch['end_sequence']}，MQTT=pending，中心=not_requested")
-        if args.broker:
-            for result in flush_pending(args.db_path, registry, args.broker, args.port, args.username, password, args.timeout):
-                print(f"MQTT {result[2]} {result[0]} {result[1]}：{result[3]}")
-        if round_number + 1 < args.rounds:
-            next_round_at += interval
-            remaining = next_round_at - time.monotonic()
-            if remaining > 0:
-                time.sleep(remaining)
-            else:
+
+    # 只有一个发送线程，避免多个发送任务同时处理同一批次。
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        sending = None
+        unscheduled = False
+
+        def submit_pending():
+            return executor.submit(
+                flush_pending,
+                args.db_path,
+                registry,
+                args.broker,
+                args.port,
+                args.username,
+                password,
+                args.timeout,
+            )
+
+        for round_number in range(args.rounds):
+            # result() 会将后台异常传回主线程，避免静默失败。
+            if sending is not None and sending.done():
+                print_mqtt_results(sending.result())
+                sending = None
+
+            batches = generate_round(
+                registry,
+                args.keys_dir,
+                args.db_path,
+                args.batch_size,
+                args.seed,
+            )
+
+            for batch in batches:
                 print(
-                    f"生成调度落后 {-remaining:.2f} 秒，"
-                    "当前处理速度未跟上设定频率"
+                    f"已生成并保存 {batch['device_id']} "
+                    f"{batch['batch_id']} "
+                    f"seq {batch['start_sequence']}~"
+                    f"{batch['end_sequence']}，"
+                    "MQTT=pending，中心=not_requested"
                 )
+
+            if args.broker:
+                unscheduled = True
+                if sending is None:
+                    sending = submit_pending()
+                    unscheduled = False
+
+            if round_number + 1 < args.rounds:
+                next_round_at += interval
+                remaining = next_round_at - time.monotonic()
+                if remaining > 0:
+                    time.sleep(remaining)
+                else:
+                    print(
+                        f"生成调度落后 {-remaining:.2f} 秒，"
+                        "当前处理速度未跟上设定频率"
+                    )
+
+        # 生成结束后，等待当前发送任务完成。
+        if sending is not None:
+            print_mqtt_results(sending.result())
+
+        # 当前发送期间若又生成了新批次，最后再检查一次待发队列。
+        # 失败批次继续保存在数据库，不无限重试。
+        if args.broker and unscheduled:
+            print_mqtt_results(submit_pending().result())
 
 if __name__ == "__main__":
     try:

@@ -259,3 +259,5 @@ center_platform/data/
 # README 本地转存（内容已在 git 历史里）
 /docs/readme-leader-*.md
 
+# 离线交接包（git bundle），不进版本库
+*.bundle

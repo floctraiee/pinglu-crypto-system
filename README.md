@@ -11,19 +11,18 @@
 
 当前使用以WL-001身份重新生成并签名的样例，其密钥沿用已验证的原WL-900密钥。
 
-- 正常批次：`test_data/migration_wl900_to_wl001/wl001_new_sample.json`
-- 配套公开登记表：`test_data/migration_wl900_to_wl001/registry_public.json`
+- 正常批次:`test_data/verified_w001/normal_batch.json`
+- 配套公开登记表:`test_data/verified_w001/registry_public.json.`
 
-上述路径为A端本地资料，不随Git仓库提供。
-在其他电脑复现该样例前，需要单独取得这两个公开文件。
-私钥、模拟器状态数据库不随文件交接。
+上述两个公开文件随仓库提供，可用于本地验签复现。
+私钥和模拟器状态数据库不随仓库提供。
 
 ### 本地检查
 
 在项目根目录、已安装项目依赖的Python环境中执行：
 
 ```powershell
-python -m device_simulator.publish --batch-file .\test_data\migration_wl900_to_wl001\wl001_new_sample.json --registry .\test_data\migration_wl900_to_wl001\registry_public.json --dry-run
+python -m device_simulator.publish --batch-file .\test_data\verified_wl001\normal_batch.json --registry .\test_data\verified_wl001\registry_public.json --dry-run
 ```
 
 预期显示本地验签与合同检查通过，批次为WL-001-000001，
@@ -37,7 +36,7 @@ dry-run不连接Broker、不发送消息，显示未连接Broker属于预期行�
 以下命令中的地址为此前联调地址：
 
 ```powershell
-python -m device_simulator.publish --batch-file .\test_data\migration_wl900_to_wl001\wl001_new_sample.json --registry .\test_data\migration_wl900_to_wl001\registry_public.json --broker 172.24.76.45 --port 1883 --timeout 15
+python -m device_simulator.publish --batch-file .\test_data\verified_wl001\normal_batch.json --registry .\test_data\verified_wl001\registry_public.json --broker 172.24.76.45 --port 1883 --timeout 15
 ```
 
 MQTT PUBACK只表示Broker已确认接收。

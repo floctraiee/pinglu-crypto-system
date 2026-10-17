@@ -75,6 +75,8 @@ def publish_qos1(broker, port, topic, payload, username=None, password=None, tim
         client_id="pinglu-device-simulator",
         protocol=mqtt.MQTTv311,
     )
+    client.connect_timeout = timeout
+    
     if username is not None:
         client.username_pw_set(username, password)
 

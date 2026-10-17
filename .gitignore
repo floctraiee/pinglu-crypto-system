@@ -237,3 +237,4 @@ tests/_probe_cases/
 # pytest 临时目录
 .pytest_tmp/
 pytest-cache-files-*/
+pytest-of-*/

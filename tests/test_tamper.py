@@ -35,6 +35,15 @@ _REGISTRY = json.loads(
     (ROOT / "test_data" / "registry_public.json").read_text(encoding="utf-8")
 )
 
+# 生成样本需要设备私钥（tests/inject_anomalies.py 默认读 keys/NM-001.json）。
+# 设备私钥不随仓库分发（.gitignore 忽略 keys/），缺失时整个模块跳过，
+# 使交付包在干净环境中 pytest 仍能全绿（skipped 而非 error）。
+_KEYS_PATH = ROOT / "keys" / "NM-001.json"
+pytestmark = pytest.mark.skipif(
+    not _KEYS_PATH.exists(),
+    reason="缺少设备私钥 keys/NM-001.json（keys/ 不随仓库分发），跳过异常注入对照实验",
+)
+
 
 def _ensure_cases():
     """样本不存在就先按默认规模生成一份（700 份，约需 30~60 秒）。"""

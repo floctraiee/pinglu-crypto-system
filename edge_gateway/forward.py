@@ -23,10 +23,11 @@
 """
 import json
 import threading
+import time
 import urllib.error
 import urllib.request
 
-from . import config, storage
+from . import config, status, storage
 
 
 def post_batch(batch, center_url=None, timeout=None):
@@ -224,6 +225,7 @@ def run_forever(stop_event, wake_event=None, center_url=None, timeout=None,
     作为"没有新批次时"的重试节拍（用于清掉之前发送失败的批次）。
     """
     interval = interval or config.RETRY_INTERVAL
+    last_status_at = 0.0
 
     while not stop_event.is_set():
         try:
@@ -236,6 +238,15 @@ def run_forever(stop_event, wake_event=None, center_url=None, timeout=None,
                       f"待重试 {summary['retry']}")
         except Exception as exc:
             print(f"[转发] 本轮异常：{type(exc).__name__}: {exc}")
+
+        # 定期把只读状态写给中心离线页（B1）。写出失败不能影响转发。
+        now = time.monotonic()
+        if now - last_status_at >= config.STATUS_INTERVAL:
+            last_status_at = now
+            try:
+                status.write()
+            except Exception as exc:
+                print(f"[状态] 写 gateway_status.json 失败：{type(exc).__name__}: {exc}")
 
         if wake_event is not None:
             # 有新批次就立刻返回，否则最多等 interval 秒做一次重试扫描

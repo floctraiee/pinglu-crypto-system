@@ -69,6 +69,14 @@ FORWARD_SHARDS = _env_int("FORWARD_SHARDS", 24)
 # 工作线程处理，链尾推进的先后关系不受影响。
 RECV_WORKERS = _env_int("RECV_WORKERS", 8)
 
+# 只读状态文件：中心离线页优先读它（约定见 docs/gateway_status_contract.md）。
+# 默认落在 edge_gateway/data/ 下，与网关缓存库同目录。
+STATUS_PATH = Path(
+    os.environ.get("PINGLU_STATUS_PATH", str(Path(__file__).resolve().parent / "data" / "gateway_status.json"))
+)
+# 多久刷新一次状态文件（秒）。太小会白耗 CPU（要扫一遍 pending_batches）。
+STATUS_INTERVAL = _env_int("STATUS_INTERVAL", 5)
+
 
 def describe():
     """返回当前生效的配置，便于联调时确认环境变量是否生效。"""
@@ -87,6 +95,8 @@ def describe():
         "MAX_PER_DEVICE_PER_ROUND": MAX_PER_DEVICE_PER_ROUND,
         "FORWARD_SHARDS": FORWARD_SHARDS,
         "RECV_WORKERS": RECV_WORKERS,
+        "STATUS_PATH": str(STATUS_PATH),
+        "STATUS_INTERVAL": STATUS_INTERVAL,
     }
 
 

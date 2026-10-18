@@ -41,7 +41,16 @@ ROUNDS = 3
 REGISTRY = json.loads(
     (ROOT / "test_data" / "registry_public.json").read_text(encoding="utf-8")
 )
-KEYS = json.loads((ROOT / "keys" / f"{DEVICE}.json").read_text(encoding="utf-8"))
+
+# 设备私钥不随仓库分发（.gitignore 忽略 keys/）。缺失时整个模块跳过，
+# 使交付包在干净环境中 pytest 仍能全绿（skipped 而非 error）。
+_KEYS_PATH = ROOT / "keys" / f"{DEVICE}.json"
+KEYS = json.loads(_KEYS_PATH.read_text(encoding="utf-8")) if _KEYS_PATH.exists() else None
+
+pytestmark = pytest.mark.skipif(
+    KEYS is None,
+    reason=f"缺少设备私钥 {DEVICE}.json（keys/ 不随仓库分发），跳过断网补传演练",
+)
 
 #: 指向一个必然拒绝连接的端口，用来模拟"中心不可达"
 UNREACHABLE = "http://127.0.0.1:1"

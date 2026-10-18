@@ -264,3 +264,13 @@ center_platform/data/
 
 # 离线交接包
 *.bundle
+
+# 本地运行生成的旧测试登记表
+/test_data/runner_final.json
+/test_data/runner_out2.json
+
+# 历史 WL-900 联调资料
+/test_data/integration_wl900/
+
+# 本地另一组百设备测试登记表
+/test_data/registry_100.json

@@ -1,3 +1,4 @@
+from contextlib import closing
 from concurrent.futures import ThreadPoolExecutor
 """多设备模拟运行入口：先持久化生成，再可选地按设备顺序发送待发批次。"""
 import argparse
@@ -6,7 +7,7 @@ import time
 from pathlib import Path
 
 from .batch import create_next_batch, pending_batches, record_mqtt_result
-from .publish import publish_qos1, validate_for_publish
+from .publish import PersistentPublisher, publish_qos1, validate_for_publish
 from .register import register_devices
 
 
@@ -15,7 +16,14 @@ def flush_pending(db_path, registry, broker, port, username=None, password=None,
     results = []
     current_device = None
     blocked_devices = set()
-    for item in pending_batches(db_path):
+    items = sorted(
+        pending_batches(db_path),
+        key=lambda item: (
+            int(item["batch_id"].rsplit("-", 1)[1]),
+            item["device_id"],
+        ),
+    )
+    for item in items:
         device_id = item["device_id"]
         if device_id in blocked_devices:
             continue
@@ -94,7 +102,8 @@ def main():
     next_round_at = time.monotonic()
 
     # 只有一个发送线程，避免多个发送任务同时处理同一批次。
-    with ThreadPoolExecutor(max_workers=1) as executor:
+    with closing(PersistentPublisher()) as publisher, \
+            ThreadPoolExecutor(max_workers=1) as executor:
         sending = None
         unscheduled = False
 
@@ -108,6 +117,7 @@ def main():
                 args.username,
                 password,
                 args.timeout,
+                publish=publisher,
             )
 
         for round_number in range(args.rounds):

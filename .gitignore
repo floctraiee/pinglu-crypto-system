@@ -229,3 +229,6 @@ keys/
 
 # 迁移准备资料，含私钥副本
 /test_data/migration_wl900_to_wl001/
+
+# 本地百设备测试密钥
+/keys_100/

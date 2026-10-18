@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -31,9 +32,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import 报告_内容_定稿 as C  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
-TEMPLATE = Path(r"C:\Users\67\AppData\Local\Temp\附件二---作品设计报告（模板）.docx")
+# 官方模板不入库：用环境变量指定路径，避免把本机个人路径写进提交包
+#   set PINGLU_REPORT_TEMPLATE=<附件二 模板.docx 路径>
+TEMPLATE = Path(os.environ.get("PINGLU_REPORT_TEMPLATE")
+                or (ROOT.parent / "附件二---作品设计报告（模板）.docx"))
 FIG_DIR = ROOT / "报告图_定稿"
-OUT = ROOT / "作品设计报告_平陆运河国密可信采集与篡改溯源系统.docx"
+OUT = ROOT / "作品设计报告_面向平陆运河数字孪生的多源感知数据国密可信采集与篡改溯源系统.docx"
 
 CN_HEI = "黑体"
 CN_SONG = "宋体"
@@ -363,7 +367,8 @@ def fill_cover(doc):
         if text.startswith("作品编号"):
             drop_text_runs(p)
             set_run(p.add_run("作品编号："), size=14, cn=CN_KAI)
-            set_run(p.add_run("＿" * 18), size=14, cn=CN_KAI)
+            report_id = getattr(C, "REPORT_ID", "")
+            set_run(p.add_run(report_id or ("＿" * 18)), size=14, cn=CN_KAI)
         elif text.startswith("作品类别"):
             drop_text_runs(p)
             set_run(p.add_run("作品类别： ■软件设计    □硬件制作    □工程实践"),
@@ -374,7 +379,16 @@ def fill_cover(doc):
         elif text.startswith("作品题目"):
             drop_text_runs(p)
             set_run(p.add_run("作品题目："), size=14, cn=CN_KAI)
-            set_run(p.add_run(C.TITLE), size=14, bold=True, cn=CN_KAI)
+            # 题目较长：在语义处断行，两行都对齐到题目起始位置，避免第二行回退到左边距
+            fmt = p.paragraph_format
+            fmt.left_indent = Pt(70)
+            fmt.first_line_indent = Pt(-70)
+            title_text = C.TITLE
+            cut = 17 if len(title_text) > 24 else len(title_text)
+            set_run(p.add_run(title_text[:cut]), size=14, bold=True, cn=CN_KAI)
+            if cut < len(title_text):
+                p.add_run().add_break(WD_BREAK.LINE)
+                set_run(p.add_run(title_text[cut:]), size=14, bold=True, cn=CN_KAI)
         elif text.strip() == "年  月  日":
             drop_text_runs(p)
             set_run(p.add_run("2026年10月19日"), size=14, cn=CN_KAI)
@@ -409,7 +423,8 @@ def fill_info_table(doc):
             set_run(p.add_run(text), size=10.5, bold=bold, cn=CN_SONG)
         return p
 
-    rewrite(table.rows[1].cells[0], [("编号：", False), ("＿" * 16, False)])
+    rewrite(table.rows[1].cells[0], [("编号：", False),
+                                     (getattr(C, "REPORT_ID", "") or ("＿" * 16), False)])
     rewrite(table.rows[2].cells[0], [("作品题目：", False), (C.TITLE, True)])
     rewrite(table.rows[3].cells[0], [
         ("作品类别：", False),

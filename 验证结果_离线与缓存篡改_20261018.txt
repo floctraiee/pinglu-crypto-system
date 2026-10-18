@@ -1,0 +1,31 @@
+﻿================================================================================
+断网补传与缓存篡改演练（本机实测，2026-10-18）
+================================================================================
+实现：tests/test_offline.py（进程内桩中心，内部直接调用
+      center_platform.validator.validate_batch，判定逻辑与真中心一致）、
+      tests/tamper_cache.py（改缓存 raw_json 不动签名）
+隔离：网关库经 monkeypatch 指到 pytest 临时目录，不触碰 edge_gateway/data/edge_cache.db
+
+场景与判定：
+  1. 中心不可达 → 批次保留 pending、attempts 递增、同设备只重试队首批
+  2. 中心恢复   → 按序补传、全部 accepted、中心侧序号连续、网关链尾推进
+  3. 重复投递   → 同一批再收一次不产生第二条待传任务（QoS1 幂等）
+  4. 缓存被改   → 中心用登记公钥重算 → INVALID_RECORD_HASH，并精确指出被改序号
+  5. 缓存未改   → 正常 accepted（对照组，防误报）
+
+命令：.venv\Scripts\python.exe -m pytest tests/test_offline.py tests/tamper_cache.py -v -s
+
+--------------------------------------------------------------------------------
+运行结果
+--------------------------------------------------------------------------------
+collecting ... collected 5 items
+tests/test_offline.py::test_offline_keeps_queue_and_retries_only_head PASSED
+tests/test_offline.py::test_recovery_delivers_in_order PASSED
+tests/test_offline.py::test_duplicate_delivery_is_idempotent PASSED
+tests/tamper_cache.py::test_tampered_cache_is_rejected_with_sequence PASSED
+tests/tamper_cache.py::test_untampered_cache_is_accepted PASSED
+============================== 5 passed in 2.52s ==============================
+
+结论：5/5 通过。断网只影响投递、不影响生成与成链；恢复后按设备与批次序补传；
+      缓存被改后网关的“初验通过”不能替代中心复核，中心独立判拒并定位序号。
+================================================================================

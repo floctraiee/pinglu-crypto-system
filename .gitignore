@@ -274,3 +274,7 @@ center_platform/data/
 
 # 本地另一组百设备测试登记表
 /test_data/registry_100.json
+
+# B 端异常注入实验的样本目录（700 份 JSON，按需生成，不入库）
+tests/anomaly_cases/
+tests/_anomaly_scratch/

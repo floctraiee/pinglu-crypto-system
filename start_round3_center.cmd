@@ -5,7 +5,7 @@ cd /d "%~dp0"
 set "DB=%CD%\_tmp\round3\center.db"
 
 echo ============================================================
-echo  Test center - ROUND 3 (fresh database, WAL enabled)
+echo  Test center - ROUND 3 (fresh database, WAL, no access log)
 echo  db     : %DB%
 echo  listen : 0.0.0.0:8150
 echo  stats  : http://172.24.108.95:8150/stats
@@ -20,4 +20,4 @@ if not exist "%DB%" (
 )
 
 set PINGLU_CENTER_DB=%DB%
-python -m uvicorn center_platform.main:app --host 0.0.0.0 --port 8150
+python -m uvicorn center_platform.main:app --host 0.0.0.0 --port 8150 --no-access-log --log-level warning

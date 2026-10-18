@@ -20,4 +20,4 @@ if not exist "%DB%" (
 )
 
 set PINGLU_CENTER_DB=%DB%
-python -m uvicorn center_platform.main:app --host 0.0.0.0 --port 8150
+python -m uvicorn center_platform.main:app --host 0.0.0.0 --port 8150 --no-access-log --log-level warning

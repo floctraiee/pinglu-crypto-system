@@ -1,0 +1,51 @@
+{
+  "WL-001": {
+    "device_id": "WL-001",
+    "device_type": "water_level",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "f5050b9405dd3d6413f4293ca5c007b842fba209e475d2f07b887e2b08ef2e91cbf84be855169d3a0c6305be54e0335406ee7398d682e6f448acfe324e9097d4"
+  },
+  "WE-001": {
+    "device_id": "WE-001",
+    "device_type": "weather",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "07d7420936b5b4ab15ea6a019f22b4d0eafffcb8b24bf09b4f01293f96cef8725b3f122381db9dbd4ed74943a3be88f7e24e2040c097ad9e5e1dd2a1f638e8a2"
+  },
+  "NM-001": {
+    "device_id": "NM-001",
+    "device_type": "navigation_mark",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "f1797c202fd44584dd1590f3b8bc96e11414121ee2e3993a7b6bb69b391a545d5d3ed790e122b949ac73a15dfef8f5d953b2183fced1e5d985a6ff00815c4531"
+  },
+  "SL-001": {
+    "device_id": "SL-001",
+    "device_type": "slope",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "3d680f67a24fb1cd86a787101346ef16e77dce5d7f1a10180180a24066f2715d712ba210f154d1e5551b5cb4874bf846905e5892429520f364cee4b7e722c792"
+  },
+  "LK-001": {
+    "device_id": "LK-001",
+    "device_type": "lock",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "909cb9334b165575959d0869980c069b3b1e9b3aeb93efa81aaee739cf2d892810c9c52a909b56756e52b3f0bdc71da910fa8c75f678333a8ab12908eba9e5e7"
+  },
+  "DR-001": {
+    "device_id": "DR-001",
+    "device_type": "drone",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "2b815e80b9e0aed917d3c00640fb79a50e6d92f01d4f23ca4373c9f3055306cff42d96a9cbbc691de76c06e6dd4a38be144b8fb86d2d0c1ee2d655dfeac0352c"
+  },
+  "SB-001": {
+    "device_id": "SB-001",
+    "device_type": "survey_boat",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "475a04a2f972eb322fcec61f945acca10b39e7e45fca8830bbb1b6882771e8888166ca7b6a89c71ca87f819f5525c3a2d64a7f4108f07f79ef8768ff5a0230c9"
+  }
+}

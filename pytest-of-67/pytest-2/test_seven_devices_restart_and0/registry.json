@@ -1,0 +1,51 @@
+{
+  "WL-001": {
+    "device_id": "WL-001",
+    "device_type": "water_level",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "651d66444250e3b009eaab3e43c0114595ce9ad49da9502c56dd35178037ab399501de85d926e6f0baecd9077569ac3d64a68962453c3b2be02e3e9d632f9f1b"
+  },
+  "WE-001": {
+    "device_id": "WE-001",
+    "device_type": "weather",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "5a97dfa829f7940c278ce53421a07f15aa1af4321777e6e314f517a47a8302d233631b3437de7bd58fccc87ebf6ef7d7bd8307934820c5656c0974c251e514ce"
+  },
+  "NM-001": {
+    "device_id": "NM-001",
+    "device_type": "navigation_mark",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "c97c5b47a6a16c64230c6b605dd4c3ac70b8d5a7053dee6b029c6861bbc54c2a98f2a9673d8965edcf89d8f71cd3420dedbdf697e0b4d6dfe9966a616a2fcf1f"
+  },
+  "SL-001": {
+    "device_id": "SL-001",
+    "device_type": "slope",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "89f8e632b638f29f036d71eb2bac856068d889d76dcf3bb5106fb68d41d81768610433c3a472194e33b6d7efba121f9bfa482ac992fd04de6ee88cc02d970632"
+  },
+  "LK-001": {
+    "device_id": "LK-001",
+    "device_type": "lock",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "a0e8218dc084ed8f4448dcce5705b4f96b7931cae1742b5444d4dcdcc3e47e5938540bac070deab639be78981fa04f6055fdd07b4254cbaef05cfb8799939155"
+  },
+  "DR-001": {
+    "device_id": "DR-001",
+    "device_type": "drone",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "f68ccfcaa10244214a466c98206f7743c94f8549d635da4f599bc447be088cfe458430d775ca847b1b27062a805bd8ecf1ab48a4e6cdf7a6ba3d8eeb1a51cc94"
+  },
+  "SB-001": {
+    "device_id": "SB-001",
+    "device_type": "survey_boat",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "abffeabd594932c2ebf118fe378224c440b9296e8450804120a18a8db20632afe984658d985340a368d20231be4755a5e1c95553abbe28c31915fcd34c6efe62"
+  }
+}

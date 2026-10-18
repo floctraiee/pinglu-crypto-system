@@ -1,0 +1,36 @@
+﻿================================================================================
+整套 pytest 验收记录（2026-10-18）
+================================================================================
+环境：Windows / Python Python 3.12.14
+依赖：gmssl / pytest / fastapi / httpx / paho-mqtt / uvicorn（按 requirements.txt 版本）
+数据源：报告正文单一数据源 报告_内容_定稿.py；本文档只记录测试证据
+
+命令（仓库根目录）：
+  .venv\Scripts\python.exe -m pip install -r requirements.txt
+  .venv\Scripts\python.exe -m pytest -q
+
+说明：
+- 样本目录与异常报告路径支持环境变量覆盖（ANOMALY_CASES_DIR / ANOMALY_REPORT），
+  默认 tests/anomaly_cases 与 tests/anomaly_report.md；验收机上目录写权限受限，
+  本次把报告重定向到 _tmp 后运行，判定逻辑与默认行为一致。
+- 测试收集阶段按 PINGLU_CENTER_DB 初始化中心库；本次指向 _tmp，未触碰正式库。
+
+--------------------------------------------------------------------------------
+收集到的用例（按模块）
+--------------------------------------------------------------------------------
+  tests/tamper_cache.py                2 项
+  tests/test_center.py                13 项
+  tests/test_contract_integration.py  17 项
+  tests/test_crypto.py                14 项
+  tests/test_device_runner.py          1 项
+  tests/test_offline.py                3 项
+  tests/test_tamper.py                 2 项
+  合计 52 项 + 14 subtests
+
+--------------------------------------------------------------------------------
+运行结果
+--------------------------------------------------------------------------------
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+52 passed, 3 warnings, 14 subtests passed in 23.34s
+================================================================================

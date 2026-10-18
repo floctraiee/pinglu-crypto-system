@@ -13,7 +13,7 @@
   sequence_gap-12            → rejected / INVALID_SEQUENCE
   batch_number_replay-13     → rejected / BATCH_CONTENT_CONFLICT
   extra_field-14             → rejected / INVALID_BATCH_STRUCTURE
-已保存结果 → C:\Users\67\AppData\Local\Temp\dsh-sv93wY\dsh_eval\results.json
+已保存结果 -> (temp)/dsh_eval/results.json
 
 ==================================================================================
 系统输出与真实标签对比

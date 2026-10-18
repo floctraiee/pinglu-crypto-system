@@ -1,0 +1,45 @@
+﻿================================================================================
+异常注入对照实验（协作者样本，700 例）—— 本机复现记录（2026-10-18）
+================================================================================
+样本来源：tests/inject_anomalies.py --per-class 100（确定性生成，seed 2026）
+判定函数：common_crypto.batch.verify_batch（中心 center_platform/validator.py、
+          网关 edge_gateway/validator.py 都是它的包装，三端同一实现）
+基准设备：NM-001（本地私钥与登记表配套；WL-001 私钥不在本机，见说明）
+复现命令：
+  .venv\Scripts\python.exe tests\inject_anomalies.py --per-class 100 --out tests\anomaly_cases
+  .venv\Scripts\python.exe -m pytest tests/test_tamper.py -v -s
+  若目录只读，可用环境变量重定向：
+    set ANOMALY_REPORT=_tmp\anomaly_report.md && set ANOMALY_CASES_DIR=tests\anomaly_cases
+
+--------------------------------------------------------------------------------
+结果（由 tests/test_tamper.py 自动生成）
+--------------------------------------------------------------------------------
+# 异常注入对照实验结果
+
+样本总数：正常 100 份，异常 600 份
+
+| 类别 | 样本 | 检出 | 定位正确 | 实际 reason_code |
+|---|---|---|---|---|
+| batch_count | 100 | 100 | 100 | INVALID_BATCH_RANGE×100 |
+| hash_chain | 100 | 100 | 100 | INVALID_HASH_CHAIN×100 |
+| merkle_root | 100 | 100 | 100 | INVALID_MERKLE_ROOT×100 |
+| record_payload | 100 | 100 | 100 | INVALID_RECORD_HASH×100 |
+| signature | 100 | 100 | 100 | INVALID_SIGNATURE×100 |
+| structure | 100 | 100 | 100 | INVALID_BATCH_STRUCTURE×100 |
+
+| 指标 | 实测 | 目标 | 结论 |
+|---|---|---|---|
+| 检测率 | 100.00% | >= 98% | 达标 |
+| 定位准确率 | 100.00% | >= 98% | 达标 |
+| 误报率 | 0.00% | <= 2% | 达标 |
+
+--------------------------------------------------------------------------------
+说明与局限
+--------------------------------------------------------------------------------
+1. 6 类异常覆盖 6 种错误码：INVALID_BATCH_RANGE / INVALID_HASH_CHAIN /
+   INVALID_MERKLE_ROOT / INVALID_RECORD_HASH / INVALID_SIGNATURE / INVALID_BATCH_STRUCTURE；
+   另有自造 14 例覆盖重放、未登记设备、序号跳号、未约定字段等其余错误码。
+2. 判定在本地执行（同一验证函数），不经真实网关与中心两端；端到端独立性另见
+   验证结果_中心功能冒烟_*.txt / 验证结果_页面接口_*.txt / P33 对账。
+3. 每类只改一处、并刻意绕开更靠前的检查项，因此 reason_code 能唯一对应到该类异常。
+================================================================================

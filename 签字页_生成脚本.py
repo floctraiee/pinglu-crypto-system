@@ -6,6 +6,7 @@
 """
 
 from pathlib import Path
+import os
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -14,7 +15,10 @@ from docx.oxml.ns import qn
 from docx.shared import Pt
 
 ROOT = Path(__file__).resolve().parent
-TEMPLATE = Path(r"C:\Users\67\AppData\Local\Temp\附件三---审批及签字页.docx")
+# 官方模板不入库：用环境变量指定路径，避免把本机个人路径写进提交包
+#   set PINGLU_SIGN_TEMPLATE=<附件三 签字页模板.docx 路径>
+TEMPLATE = Path(os.environ.get("PINGLU_SIGN_TEMPLATE")
+                or (ROOT.parent / "附件三---审批及签字页.docx"))
 OUT = ROOT / "审批及签字页_平陆运河国密可信采集与篡改溯源系统.docx"
 
 TITLE = "平陆运河多源感知数据国密可信采集与篡改溯源系统"

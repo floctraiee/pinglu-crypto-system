@@ -23,8 +23,12 @@ if str(ROOT) not in sys.path:
 from common_crypto.batch import verify_batch  # noqa: E402
 from common_crypto.hash_chain import ZERO_HASH  # noqa: E402
 
-CASES_DIR = ROOT / "tests" / "anomaly_cases"
-REPORT_PATH = ROOT / "tests" / "anomaly_report.md"
+import os
+
+# 样本目录与结果报告支持环境变量覆盖：只读环境或 CI 上可指到可写目录，
+# 默认仍是仓库内路径（保持交付包原行为）。
+CASES_DIR = Path(os.environ.get("ANOMALY_CASES_DIR") or (ROOT / "tests" / "anomaly_cases"))
+REPORT_PATH = Path(os.environ.get("ANOMALY_REPORT") or (ROOT / "tests" / "anomaly_report.md"))
 PER_CLASS = 100
 
 TARGET_DETECTION = 0.98

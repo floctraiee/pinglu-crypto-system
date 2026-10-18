@@ -3,6 +3,8 @@
 本模块不生成批次、不更新 simulator.db，也不把 MQTT PUBACK 误当作中心
 accepted。中心转发及其终态确认由边缘网关负责。
 """
+import threading
+import uuid
 import argparse
 import json
 import os
@@ -62,6 +64,99 @@ def validate_for_publish(batch, registry):
     payload = canonical_bytes(batch)
     return f"pinglu/batches/{device_id}", payload
 
+class PersistentPublisher:
+    """供单个发送工作线程使用，跨批次复用 MQTT 连接。"""
+
+    def __init__(self):
+        self.client = None
+        self.settings = None
+        self.connected = threading.Event()
+        self.connect_error = None
+
+    def _on_connect(self, client, userdata, flags, reason_code, properties):
+        if reason_code.is_failure:
+            self.connect_error = f"Broker 拒绝连接：{reason_code}"
+        else:
+            self.connect_error = None
+        self.connected.set()
+
+    def _on_disconnect(
+        self, client, userdata, disconnect_flags, reason_code, properties
+    ):
+        self.connected.clear()
+
+    def close(self):
+        client = self.client
+        self.client = None
+        self.settings = None
+        self.connected.clear()
+
+        if client is not None:
+            try:
+                client.disconnect()
+            finally:
+                client.loop_stop()
+
+    def __call__(
+        self, broker, port, topic, payload,
+        username=None, password=None, timeout=15,
+    ):
+        import paho.mqtt.client as mqtt
+
+        settings = (broker, port, username, password, timeout)
+
+        try:
+            if (
+                self.client is None
+                or self.settings != settings
+                or not self.client.is_connected()
+            ):
+                self.close()
+                self.connect_error = None
+
+                self.client = mqtt.Client(
+                    mqtt.CallbackAPIVersion.VERSION2,
+                    client_id=f"pinglu-sim-{uuid.uuid4().hex[:12]}",
+                    protocol=mqtt.MQTTv311,
+                    reconnect_on_failure=False,
+                )
+                self.client.connect_timeout = timeout
+                self.client.on_connect = self._on_connect
+                self.client.on_disconnect = self._on_disconnect
+
+                if username is not None:
+                    self.client.username_pw_set(username, password)
+
+                self.client.connect(broker, port, keepalive=30)
+                self.client.loop_start()
+
+                if not self.connected.wait(timeout):
+                    raise TimeoutError("等待 MQTT 连接确认超时")
+                if self.connect_error is not None:
+                    raise RuntimeError(self.connect_error)
+                if not self.client.is_connected():
+                    raise RuntimeError("MQTT 连接已断开")
+
+                self.settings = settings
+
+            info = self.client.publish(
+                topic, payload=payload, qos=1, retain=False
+            )
+            if info.rc != mqtt.MQTT_ERR_SUCCESS:
+                raise RuntimeError(
+                    f"MQTT 发布未被客户端接受，rc={info.rc}"
+                )
+
+            info.wait_for_publish(timeout=timeout)
+            if not info.is_published():
+                raise TimeoutError("等待 MQTT PUBACK 超时")
+
+            return info.mid
+
+        except Exception:
+            self.close()
+            raise
+
 
 def publish_qos1(broker, port, topic, payload, username=None, password=None, timeout=15):
     """发布一次 QoS 1、retain=False 消息；返回 MQTT 消息编号。"""
@@ -76,7 +171,7 @@ def publish_qos1(broker, port, topic, payload, username=None, password=None, tim
         protocol=mqtt.MQTTv311,
     )
     client.connect_timeout = timeout
-    
+
     if username is not None:
         client.username_pw_set(username, password)
 

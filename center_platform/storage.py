@@ -20,10 +20,34 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
+# SQLite 持久化策略：默认 WAL + NORMAL（官方推荐组合，写入吞吐更高）。
+# 可用环境变量回退到优化前配置，便于在同一环境做对照测试：
+#   PINGLU_SQLITE_JOURNAL=DELETE  PINGLU_SQLITE_SYNC=FULL
+_ALLOWED_JOURNAL = {"WAL", "DELETE", "TRUNCATE", "PERSIST", "MEMORY"}
+_ALLOWED_SYNC = {"OFF", "NORMAL", "FULL", "EXTRA"}
+
+
+def _pragma_value(name, default, allowed):
+    value = os.environ.get(name, default).upper()
+    return value if value in allowed else default
+
+
+SQLITE_JOURNAL = _pragma_value("PINGLU_SQLITE_JOURNAL", "WAL", _ALLOWED_JOURNAL)
+SQLITE_SYNC = _pragma_value("PINGLU_SQLITE_SYNC", "NORMAL", _ALLOWED_SYNC)
+
+
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    # WAL + synchronous=NORMAL：进程崩溃不丢已提交事务（WAL 保证），
+    # 仅在突然断电时可能丢失最后若干事务，换来更高的写入吞吐。
+    # 只读库或受限环境下写入型 PRAGMA 会失败，此时保持默认日志模式即可。
+    try:
+        conn.execute(f"PRAGMA journal_mode = {SQLITE_JOURNAL}")
+        conn.execute(f"PRAGMA synchronous = {SQLITE_SYNC}")
+    except sqlite3.OperationalError:
+        pass
     return conn
 
 

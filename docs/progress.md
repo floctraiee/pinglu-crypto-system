@@ -320,6 +320,36 @@ WL-001：batches=1（WL-001-000001，accepted，10-09 21:34）／records=10
 它里面的 `WL-001-000001` 与 A 的 `test_data/normal_batch.json`、中心库历史留下的
 那条是同一个批次号，三者混用就是「旧 WL-001-000001」冲突的来源。
 
+## 四之三、SQLite 持久化策略优化与对照（10-17）
+
+**改动**
+
+- 中心 `center_platform/storage.py` 的 `get_connection()`：默认
+  `journal_mode=WAL` + `synchronous=NORMAL`，并对只读库/受限环境 `try/except` 容错。
+- 为可复现对照，增加环境变量开关：`PINGLU_SQLITE_JOURNAL`（默认 WAL，可设 DELETE）、
+  `PINGLU_SQLITE_SYNC`（默认 NORMAL，可设 FULL）；代码内做白名单校验。
+- 网关侧（B 的 `edge_gateway/storage.py`）：`synchronous` 由 FULL 改为 NORMAL，由 B 实施。
+
+**同环境对照（100 台 × 2 分钟 × 每批 10 条 = 1200 批 / 12000 条）**
+
+| 配置 | 吞吐 | 均值 | P50 | P95 | 最大 |
+|---|---|---|---|---|---|
+| DELETE + FULL（优化前） | 19.70 批/秒 | 50.66 ms | 52.98 ms | 64.63 ms | 127.62 ms |
+| WAL + NORMAL（优化后） | 20.37 批/秒 | 49.01 ms | 48.76 ms | 62.90 ms | 107.08 ms |
+
+**结论**
+
+1. 中心侧提升约 3%（吞吐 +3.4%，P95 −2.7%，最大 −16%）；
+2. 中心瓶颈不在磁盘持久化，而在每批一次 SM2 验签（8.34～8.42 ms）加 10 条 SM3 摘要与链校验；
+3. 因此**持久化策略对网关侧更重要**（每条原始报文一次 FULL 写入），对中心属次要优化；
+4. 报告 3.3 节已按上述实测数据写入「性能优化补充」，未使用「中心 200 ms → XX」的未复现口径。
+
+**证据**：`验证结果_优化前_2分钟.csv/.json`、`验证结果_优化后_2分钟.csv/.json`；
+基准库 `_tmp/wal_env/center.db`（WAL）、`_tmp/full_bench/center.db`（DELETE+FULL）。
+
+**语义提醒**：WAL + NORMAL 下进程崩溃不丢已提交事务，突然断电可能丢最后若干事务；
+报告中的性能数字均在该配置下测得，断电安全结论不以此为据。
+
 ---
 
 ## 五、待办清单

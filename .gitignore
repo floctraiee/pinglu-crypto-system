@@ -276,3 +276,4 @@ center_platform/data/
 # 离线交接包（git bundle），不进版本库
 *.bundle
 >>>>>>> origin/main
+/tests/anomaly_samples/

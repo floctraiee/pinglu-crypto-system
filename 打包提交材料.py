@@ -238,6 +238,8 @@ def main():
            or p.name.endswith((".db-wal", ".db-shm")) or "\\keys\\" in str(p)]
     leaks = []
     for path in files:
+        if path.name == Path(__file__).name:  # 扫描脚本自身含检测关键字，跳过
+            continue
         if path.suffix.lower() not in (".md", ".txt", ".py", ".json", ".csv", ".cmd", ".conf",
                                        ".js", ".html", ".css"):
             continue

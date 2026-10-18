@@ -8,44 +8,88 @@
            rejected 记为终态并留证；网络失败、超时、5xx 一律保留待传
   第 9 步  由定时轮询驱动，重启后从数据库恢复，不依赖内存计数
 
-只用标准库 urllib，不引入额外依赖。
+只用标准库（http.client + json），不引入额外依赖。
+
+连接复用
+--------
+网关是按批串行转发的（第 7 步要求同设备按序、不抢跑），如果每批都新建 TCP 连接，
+100 台 × 每批一次握手会白吃掉 10 ms/批。所以这里按（主机, 端口）缓存一个
+http.client.HTTPConnection，在同一线程内复用；连接被服务端关闭时自动重连一次。
 """
+import http.client
 import json
-import urllib.error
-import urllib.request
+import threading
+from urllib.parse import urlsplit
 
 from . import config, storage
+
+#: 每个线程一份 HTTP 连接缓存（网关的转发线程只有一个，但测试里可能多线程）
+_HTTP_LOCAL = threading.local()
+
+
+def _reset_connection():
+    conn = getattr(_HTTP_LOCAL, "conn", None)
+    if conn is not None:
+        try:
+            conn.close()
+        except Exception:
+            pass
+    _HTTP_LOCAL.conn = None
+    _HTTP_LOCAL.key = None
+
+
+def _shared_connection(base_url, timeout):
+    """取出（或建立）本线程复用的连接，返回 (conn, 请求路径)。"""
+    parts = urlsplit(base_url)
+    host = parts.hostname
+    port = parts.port or (443 if parts.scheme == "https" else 80)
+    key = (base_url, timeout)
+    conn = getattr(_HTTP_LOCAL, "conn", None)
+    if conn is not None and getattr(_HTTP_LOCAL, "key", None) == key:
+        return conn, parts.path.rstrip("/") + "/batches"
+
+    _reset_connection()
+    conn = http.client.HTTPConnection(host, port, timeout=timeout)
+    _HTTP_LOCAL.conn = conn
+    _HTTP_LOCAL.key = key
+    return conn, parts.path.rstrip("/") + "/batches"
+
+
+def _post_once(conn, path, body):
+    """发一次请求，返回 (status, text)；异常原样抛出。"""
+    conn.request(
+        "POST",
+        path,
+        body=body,
+        headers={"Content-Type": "application/json; charset=utf-8"},
+    )
+    response = conn.getresponse()
+    return response.status, response.read().decode("utf-8")
 
 
 def post_batch(batch, center_url=None, timeout=None):
     """POST {CENTER_URL}/batches，body 必须是 {"batch": <原始批次>}。"""
-    url = f"{(center_url or config.CENTER_URL).rstrip('/')}/batches"
+    base = (center_url or config.CENTER_URL).rstrip("/")
+    timeout = timeout or config.HTTP_TIMEOUT
     body = json.dumps({"batch": batch}, ensure_ascii=False).encode("utf-8")
-    request = urllib.request.Request(
-        url,
-        data=body,
-        method="POST",
-        headers={"Content-Type": "application/json; charset=utf-8"},
-    )
 
     try:
-        with urllib.request.urlopen(
-            request, timeout=timeout or config.HTTP_TIMEOUT
-        ) as response:
-            text = response.read().decode("utf-8")
-    except urllib.error.HTTPError as exc:
-        detail = ""
+        conn, path = _shared_connection(base, timeout)
+        status, text = _post_once(conn, path, body)
+    except Exception as exc:  # 连接可能已被服务端按 keep-alive 超时关闭
+        _reset_connection()
         try:
-            detail = exc.read().decode("utf-8", "replace")
-        except Exception:
-            pass
-        return {"ok": False, "code": exc.code,
-                "error": f"HTTP {exc.code}: {detail[:200]}"}
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+            conn, path = _shared_connection(base, timeout)
+            status, text = _post_once(conn, path, body)
+        except Exception as exc2:
+            _reset_connection()
+            return {"ok": False, "error": f"{type(exc2).__name__}: {exc2}（首次: {type(exc).__name__}）"}
+
+    if status >= 400:
+        return {"ok": False, "code": status, "error": f"HTTP {status}: {text[:200]}"}
 
     try:
-        return {"ok": True, "code": response.status, "response": json.loads(text)}
+        return {"ok": True, "code": status, "response": json.loads(text)}
     except ValueError as exc:
         return {"ok": False, "error": f"中心返回的不是 JSON：{exc}；原文 {text[:200]!r}"}
 

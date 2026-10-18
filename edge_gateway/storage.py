@@ -22,6 +22,7 @@
 """
 import json
 import sqlite3
+import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -119,14 +120,68 @@ def batch_number(batch_id):
     return int(tail) if tail.isdigit() else None
 
 
+class _PooledConnection:
+    """包一层 sqlite3.Connection：close() 不真关，连接留给本线程下次复用。
+
+    网关的读写都是短事务、且同一个线程反复调用（转一批要开 3~4 次连接）。
+    每次 connect 之外还要执行两个 PRAGMA，实测占了单批约 48 ms。
+    这里复用连接后，PRAGMA 只在首次建立时执行一次。
+    """
+
+    __slots__ = ("_conn",)
+
+    def __init__(self, conn):
+        self._conn = conn
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        return False
+
+    def close(self):
+        """故意不关：连接留在 _local 里给下次复用。"""
+        return None
+
+
+#: 每个线程一份连接缓存（MQTT worker 线程与转发线程各一份，互不干扰）
+_local = threading.local()
+
+
 def get_connection():
     path = Path(config.DB_PATH)
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(path), timeout=30)
+    key = str(path)
+
+    cached = getattr(_local, "conn", None)
+    if cached is not None and getattr(_local, "key", None) == key:
+        return cached
+
+    close_cached_connection()
+    conn = sqlite3.connect(key, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode = WAL")
     conn.execute("PRAGMA synchronous = NORMAL")
-    return conn
+
+    pooled = _PooledConnection(conn)
+    _local.conn = pooled
+    _local.key = key
+    return pooled
+
+
+def close_cached_connection():
+    """真正关掉本线程缓存的连接（换库、测试收尾时用）。"""
+    cached = getattr(_local, "conn", None)
+    if cached is not None:
+        try:
+            cached._conn.close()
+        except Exception:
+            pass
+    _local.conn = None
+    _local.key = None
 
 
 def init_db():

@@ -33,6 +33,11 @@ from tests.test_offline import (  # noqa: E402
     _StubCenter,
 )
 
+pytestmark = pytest.mark.skipif(
+    KEYS is None,
+    reason=f"缺少设备私钥 {DEVICE}.json（keys/ 不随仓库分发），跳过缓存篡改检测",
+)
+
 TAMPERED_SEQUENCE = 5
 
 
@@ -46,7 +51,13 @@ def gateway_db(tmp_path, monkeypatch):
 
 @pytest.fixture
 def one_batch(tmp_path):
-    """用 NM-001 生成一个合法批次（本地私钥与登记表配套的设备）。"""
+    """用 NM-001 生成一个合法批次（本地私钥与登记表配套的设备）。
+
+    设备私钥不随仓库分发（.gitignore 忽略 keys/）。这里再守一道：
+    即使 pytestmark 因为某些原因没生效，也会 skip 而不是 TypeError。
+    """
+    if KEYS is None:
+        pytest.skip(f"缺少设备私钥 {DEVICE}.json（keys/ 不随仓库分发），跳过缓存篡改检测")
     return create_next_batch(
         REGISTRY[DEVICE], KEYS["private_key"], batch_size=10,
         db_path=tmp_path / "simulator.db", seed=2026,

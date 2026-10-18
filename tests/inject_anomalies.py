@@ -51,6 +51,10 @@ CATEGORIES = {
     "hash_chain": "INVALID_HASH_CHAIN",
     "signature": "INVALID_SIGNATURE",
     "structure": "INVALID_BATCH_STRUCTURE",
+    # 以下三类对应任务书原六类里的「插入 / 乱序 / 伪造设备」
+    "insert_record": "INVALID_BATCH_RANGE",
+    "reorder_records": "INVALID_SEQUENCE",
+    "forged_device": "UNKNOWN_DEVICE",
 }
 
 #: 期望定位粒度：
@@ -66,6 +70,9 @@ GRANULARITY = {
     "hash_chain": "contains",
     "signature": "empty",
     "structure": "empty",
+    "insert_record": "contains",
+    "reorder_records": "contains",
+    "forged_device": "empty",
 }
 
 
@@ -139,6 +146,47 @@ def inject_structure(batch, key, index=0):
     return b, None
 
 
+def inject_insert_record(batch, key, index=4):
+    """⑦ 插入一条伪造记录（复制第 5 条），records 变成 11 条但 count 仍是 10。
+
+    records 不在签名范围内，所以头部签名仍然有效 —— 检测点落在
+    「count 与实际条数不一致」→ INVALID_BATCH_RANGE。
+
+    回报被复制那条的序号：校验器会从这个位置开始报出后续全部序号，
+    所以定位粒度是"包含"而不是"空"。
+    """
+    b = copy.deepcopy(batch)
+    b["records"].insert(index + 1, copy.deepcopy(b["records"][index]))
+    return b, b["records"][index]["sequence"]
+
+
+def inject_reorder_records(batch, key, index=2):
+    """⑧ 交换相邻两条记录的顺序（内容一个字节都不改）。
+
+    sequence 与 previous_hash 都嵌在 record_hash 里，交换后这两条的自洽性被破坏，
+    检测点落在逐条记录检查 → INVALID_RECORD_HASH（会同时牵涉交换的两条）。
+    回报较小的那个序号，供"包含"粒度判定。
+    """
+    b = copy.deepcopy(batch)
+    records = b["records"]
+    records[index], records[index + 1] = records[index + 1], records[index]
+    return b, records[index + 1]["sequence"]
+
+
+def inject_forged_device(batch, key, index=0):
+    """⑨ 把 device_id 和 batch_id 换成未登记设备，且不重签名。
+
+    检查顺序是「结构 → 设备登记 → 签名」。只改 device_id 会被结构检查先拦下
+    （batch_id 必须是「设备ID-六位批次号」），所以 batch_id 也要一起换；
+    换成未登记设备后，会停在 UNKNOWN_DEVICE。
+    """
+    b = copy.deepcopy(batch)
+    number = b["batch_id"].rsplit("-", 1)[-1]
+    b["device_id"] = "XX-999"
+    b["batch_id"] = "XX-999-" + number
+    return b, None
+
+
 INJECTORS = {
     "record_payload": inject_record_payload,
     "batch_count": inject_batch_count,
@@ -146,6 +194,9 @@ INJECTORS = {
     "hash_chain": inject_hash_chain,
     "signature": inject_signature,
     "structure": inject_structure,
+    "insert_record": inject_insert_record,
+    "reorder_records": inject_reorder_records,
+    "forged_device": inject_forged_device,
 }
 
 

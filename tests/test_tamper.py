@@ -46,9 +46,17 @@ pytestmark = pytest.mark.skipif(
 
 
 def _ensure_cases():
-    """样本不存在就先按默认规模生成一份（700 份，约需 30~60 秒）。"""
+    """样本不存在（或规模变了）就先按当前类别数生成一份。
+
+    期望条数 = 每类样本数 ×（异常类别数 + 1 组正常对照）。
+    类别数从 inject_anomalies.CATEGORIES 动态取，新增注入器后会自动重新生成，
+    不会因为旧样本"看起来够用"而复用过期数据。
+    """
+    from tests.inject_anomalies import CATEGORIES as CASE_CATEGORIES
+
+    expected = PER_CLASS * (len(CASE_CATEGORIES) + 1)
     label = CASES_DIR / "label.json"
-    if label.exists() and len(json.loads(label.read_text(encoding="utf-8"))) >= PER_CLASS * 7:
+    if label.exists() and len(json.loads(label.read_text(encoding="utf-8"))) >= expected:
         return
     subprocess.run(
         [sys.executable, str(ROOT / "tests" / "inject_anomalies.py"),

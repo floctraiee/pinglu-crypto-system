@@ -1,0 +1,86 @@
+[P0][Title] 队长中心平台联调与复赛提交全程任务书
+[P1][Normal] 平陆运河多源感知数据国密可信采集与篡改溯源系统  |  队长  |  2026年10月1日至10月19日
+[P2][Normal] 你负责中心的独立验证、数据库、网页和全队联调，并把三位队员的测试证据整合成可复现的提交材料。管理任务不代替编码：10月5日前中心须能接收 A 的一份正常批次，10月8日前须完成三端闭环。
+[P3][Heading 1] 一 今天先完成的组织和环境工作
+[P4][Normal] 1. 接受A发来的私有 GitHub 仓库邀请并克隆项目；检查其目录、README 和 .gitignore，确认另外两人可访问。你负责组织接口审定、代码合并验收和最终联调，建仓及协作者管理由A负责。
+[P5][Normal] 2. 三人统一 Python 3.14，建立各自 .venv；由A提交并锁定 requirements.txt，队长核对后让三人安装同一份依赖。
+[P6][Normal] 3. 10月2日晚前把下方合同写成 docs/contract.md，请 A 和 B 给出“能按此实现”的反馈；明确批次例子、错误码、版本号和提交地址。
+[P7][Normal] 4. 同时办理复赛审批与签字页，记录学院签字和盖章的负责人与截止时间；不要留到提交前一天。
+[P8][Heading 1] 三人共同遵守的接口约定
+[P9][Normal] 10月2日晚上前由队长把本节转成 docs/contract.md，三人确认后锁定。字段有调整时须同一提交修改公共模型、三端代码、样本和测试。所有哈希及签名对象都按 UTF-8 编码，JSON 使用 sort_keys=True、ensure_ascii=False、separators=(",", ":")；测量值和经纬度使用格式化后的十进制字符串，时间统一带 +08:00 时区。
+=== TABLE 0 rows=8 cols=2 ===
+  R0: 对象 | 必须字段与规则
+  R1: 记录 | version=1；device_id、device_type、timestamp、longitude、latitude、sequence、batch_id、payload、status、previous_hash、record_hash。payload 为设备类型对应的字符串键值对象。
+  R2: 记录摘要 | SM3(canonical(record 去除 record_hash))；设备第一条 previous_hash 为64个0，其后每条接上一条 record_hash；跨批次不断链。
+  R3: Merkle树 | 按 sequence 升序。叶=SM3(0x00 || bytes.fromhex(record_hash))；父=SM3(0x01 || 左子节点 || 右子节点)，奇数层复制末节点。根以64位十六进制表达。
+  R4: 批次 | version、device_id、batch_id、start_sequence、end_sequence、count、start_time、end_time、merkle_root、records、signature。batch_id 使用“设备ID-六位批次号”，每设备递增。
+  R5: 签名 | SM2 sign_with_sm3(canonical(批次仅保留 version、device_id、batch_id、起止序号、count、起止时间、merkle_root))；signature 不参与签名。设备私钥不出设备端。
+  R6: 身份 | 设备公钥预先登记为 device_id→public_key；收到的批次不能自行提供或替换信任公钥。登记文件由A生成，B和队长导入并核对指纹。
+  R7: 返回 | 验证返回 status=accepted/rejected/duplicate、reason_code、device_id、batch_id、affected_sequences。只有中心明确持久化结果后（accepted、已审计的 rejected、内容相同的 duplicate）网关才标记此任务已确认。
+=== END TABLE 0 ===
+[P11][Normal] 验证优先次序：设备登记 → 批次签名 → 数量、起止时间和序号 → 每条摘要 → 链连接 → Merkle 根 → 历史重放。采用严格字段检查，不接受未约定字段。失败要保留原始批次和审计证据。对已签名内容的修改不能重签。网关初验失败仍向中心提交异常原文或独立审计事件，中心独立复核，保证页面能看见异常。
+[P12][Heading 1] 二 中心平台按功能逐个落地
+=== TABLE 1 rows=7 cols=3 ===
+  R0: 文件 | 要实现什么 | 完成标志
+  R1: center_platform/main.py | FastAPI：GET /health、POST /batches、GET /devices、GET /batches、GET /records、GET /audits、GET /batches/{id}/proof/{sequence}、GET /stats。 | 启动后 /docs 可提交一批 JSON。
+  R2: center_platform/validator.py | 从中心 devices 表取预登记公钥；独立调用公共规则重验，不相信网关传来的通过状态。规范 reason_code、异常序号区间。 | A 的合法批次通过、篡改批次被拒。
+  R3: center_platform/storage.py | SQLite 的 devices、batches、records、audits；device_id+batch_id 唯一；事务内存入合法批次及记录；异常保存原文和判定。 | 重复批次不重复计入数据量。
+  R4: center_platform/static/index.html | 总览、七类感知数据、异常审计、批次细节及Merkle证明、离线恢复、性能对比六块。 | 页面内容来自真实接口和SQLite。
+  R5: center_platform/static/app.js | 请求接口、周期刷新状态、按设备与批次过滤、展示证明路径和异常序号、读取实验CSV的统计数据。 | 断网时能看待传数，恢复后进度变化。
+  R6: tests/test_center.py | 合法入库、未知设备、改值、删记录、伪造签名、重复提交和证明路径。 | pytest 输出通过数；失败有可读原因。
+=== END TABLE 1 ===
+[P14][Heading 2] 中心处理 POST /batches 的顺序
+[P15][Normal] 1. 保存到达时间和网关初验结果，但以中心独立验证结果为准。
+[P16][Normal] 2. 查询设备公钥绑定；校验签名头、数量、序号、记录SM3链、Merkle根、已入库的上一批末摘要和历史批次号。
+[P17][Normal] 3. 合法时用一个数据库事务写入 batches 与 records；返回 accepted 和对应 device_id、batch_id。
+[P18][Normal] 4. 异常时写 audits（reason_code、affected_sequences、原始批次或可追溯摘要）；返回 rejected，供网关停止盲目重试。
+[P19][Normal] 5. 已处理过同一批次时比对内容：完全相同返回 duplicate 并记录重复事件，内容不同记录冲突审计；不得重复插入记录。重复事件可能是网络重试，也可能是测试脚本的历史重放，报告按测试标签区分。
+[P20][Normal] 6. 提供单条Merkle证明查询：返回叶摘要、每层兄弟节点和方向、签名批次根，以及重新验证结果。
+[P21][Heading 1] 三 网页与演示证据怎么做
+[P22][List Bullet] 首页明确展示“设备→网关→中心”的数据流和七类设备数量；重点呈现验证结果，不需要制作三维数字孪生。平陆运河示意图只承担应用场景说明。
+[P23][List Bullet] 异常页显示“设备 ID、批次 ID、记录序号或缺失区间、异常原因、边缘判定、中心复核、时间”；拒绝批次不混进正常数据列表。
+[P24][List Bullet] 证明页选择一条合法记录，显示原始摘要、路径、根、SM2签名校验结果；用真实批次查询，不用写死演示文本。
+[P25][List Bullet] 离线页可从网关的只读状态接口或联调上报数据读取缓存数、断点和补传进度；中心离线期间页面不能凭空宣称实时更新。
+[P26][List Bullet] 性能页展示1、10、20批次大小的签名次数、耗时、吞吐与P95；每个数字对应 CSV 文件、测试日期和设备规模。
+[P27][Heading 1] 四 每日联调与性能核对
+[P28][Normal] 1. 每天至少一次从A和B拉取代码；在仓库 issue 或 docs/progress.md 记录任务负责人、已通过验收、阻塞点及下一次交付时间。
+[P29][Normal] 2. 先用 A 的 normal_batch.json 直接 POST /batches，再通过 B 的 MQTT 网关发相同结构的另一批；注意唯一约束引起的预期 duplicate。
+[P30][Normal] 3. 10月8日前用同一台电脑开三个终端跑通；之后三台电脑处于同一局域网，用配置项改 IP、检查防火墙，并按 README 再跑通。
+[P31][Normal] 4. B 生成异常样本和真实标签并提供网关日志；你写 tests/evaluate.py 将系统输出和标签对比，按方案算检测率、定位准确率、误报率。
+[P32][Normal] 5. 编写 tests/benchmark_signing.py，调用A提供的签名函数，以同一批100条数据对照逐条、10条一批、20条一批，统计签名次数、签名与验签耗时、报文大小并输出 CSV。
+[P33][Normal] 6. 由你组织100设备每秒每台1条、连续30分钟测试：分别记录A端生成数、B端接收数、中心验证数、入库数。实时P95从 gateway_received_at 到中心验证完成，离线批次单列。
+[P34][Heading 1] 按日期执行与每日交接
+=== TABLE 2 rows=10 cols=3 ===
+  R0: 日期 | 本人的工作 | 当天验收与交给下一位的内容
+  R1: 10月1至2日 | 接受A的仓库邀请、审定合同、中心表结构、审批页 | 三人均能访问仓库；字段协议确认，/health运行
+  R2: 10月3至5日 | POST /batches、验证、SQLite | 直接上传A的合法样本并入库；改动样本被拒
+  R3: 10月6至8日 | 接入B网关并做最简数据页面 | 设备→网关→中心→网页闭环录像或截图
+  R4: 10月9至11日 | 审计与异常展示、评估脚本 | 各类型样本和真实标签可计算准确率
+  R5: 10月12至13日 | 断网面板、中心复核缓存篡改 | 缓存数、补传进度、异常审计证据
+  R6: 10月14至15日 | 组织100设备压力、P95、编写签名对照脚本 | CSV、日志、对照结果图、环境与统计口径
+  R7: 10月16至17日 | 报告、源码、运行说明、支撑材料 | 报告数字均有CSV依据；文档和截图可复现
+  R8: 10月18日 | 异机部署、匿名、压缩包、备份 | 按README全流程通过，检查文件大小和可打开
+  R9: 10月19日 | 用队长账号首次上传并复核 | 报告、支撑材料、审批签字页均上传且可打开
+=== END TABLE 2 ===
+[P36][Heading 1] 五 提交包具体有哪些文件
+=== TABLE 3 rows=6 cols=2 ===
+  R0: 材料 | 从谁收集与核对内容
+  R1: 作品设计报告 | 你整合：摘要、硬件部署图、软件流程、SM2/SM3/Merkle原理、功能、测试方案、实测指标、局限与结论。A提供密码原理与模拟器说明；B提供异常样本及断网恢复证据。
+  R2: 源码与运行说明 | A、B、你的代码及 requirements.txt、配置样例、初始化脚本；README写 Windows 3.14 单机启动顺序、三机 IP 配置、测试命令。
+  R3: 测试证据 | 正常与异常 JSON、标签、pytest结果、100台30分钟统计、P95原始时间戳、签名批次对照 CSV、离线补传日志与截图。
+  R4: 审批及签字页 | 按官方模板单独准备，提前完成签字盖章；只此文件按官方要求填写实名信息。
+  R5: 匿名检查 | 报告和支撑材料的封面、页眉页脚、代码注释、README、网页、截图、路径、文档属性、压缩包名称均不得出现团队及师生单位身份。支撑材料总大小不超过4GB。
+=== END TABLE 3 ===
+[P38][Normal] 复赛上传窗口按现有方案为10月19日9时至10月22日18时；10月19日是你们的内部首次提交目标。上传完成后重新下载或打开核对，并保留两份备份。
+[P40][Heading 1] 联调和最终提交共同规则
+[P41][Normal] 三人实现下列命令行入口，并在 README 写清配置文件。单机联调时按顺序开四个 Windows CMD 终端；后两项由对应负责人实现。
+[P42][Normal] mosquitto -c mosquitto.conf -v
+[P43][Normal] .venv\Scripts\python.exe -m uvicorn center_platform.main:app --host 127.0.0.1 --port 8000
+[P44][Normal] .venv\Scripts\python.exe -m edge_gateway.main
+[P45][Normal] .venv\Scripts\python.exe -m device_simulator.publish --devices 1 --rate 1 --batch-size 10
+[P47][Normal] 在三台电脑上，中心启动参数改为 --host 0.0.0.0；设备端 broker 地址指向电脑2，网关的中心 URL 指向电脑3。打开 http://电脑3IP:8000/docs 测接口，打开首页看验证结果。
+[P48][List Bullet] 10月8日前一台电脑启动中心、Mosquitto、网关、模拟器，至少一台设备的合法批次在网页出现；之后才扩展多设备和页面细节。
+[P49][List Bullet] A负责建立和维护私有仓库、邀请另外两人并管理访问权限；三人每天把各自代码推到该仓库。队长负责组织代码联调和合并前验收，合并前运行 python -m pytest。问题记录“复现命令、期望、实际、日志”。
+[P50][List Bullet] 私钥、.venv、SQLite数据库、含个人路径的日志不提交到 Git；提供初始化脚本，确保别人能复现。三台电脑联调时分别配置局域网 IP，环境变量和配置样例写入 README。
+[P51][List Bullet] 10月16日至17日把程序流程图、原始测试 CSV、日志、截图和自己负责的报告段落交给队长。10月18日在另一台电脑按 README 重新部署，10月19日先提交并核对文件能打开。
+[P52][List Bullet] 报告中的98%检测率、P95不高于1秒、100台运行30分钟都是目标，任何结论都使用真实执行结果；审批签字页与开发同步推进。

@@ -11,8 +11,8 @@
 
 当前使用以WL-001身份重新生成并签名的样例，其密钥沿用已验证的原WL-900密钥。
 
-- 正常批次:`test_data/verified_w001/normal_batch.json`
-- 配套公开登记表:`test_data/verified_w001/registry_public.json.`
+- 正常批次:`test_data/verified_wl001/normal_batch.json`
+- 配套公开登记表:`test_data/verified_wl001/registry_public.json`
 
 上述两个公开文件随仓库提供，可用于本地验签复现。
 私钥和模拟器状态数据库不随仓库提供。

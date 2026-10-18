@@ -1,0 +1,9 @@
+{
+  "WL-900": {
+    "device_id": "WL-900",
+    "device_type": "water_level",
+    "longitude": "108.500000",
+    "latitude": "22.000000",
+    "public_key": "52a4b74111376c9b7b43bb8127ab3b351828f7625a0b4328e0581cbed9f0ffe9a11a09b547cfa8691192e17bb4aff256ab4bd7d4e537fb5624f2fab6e5660de2"
+  }
+}

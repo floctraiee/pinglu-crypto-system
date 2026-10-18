@@ -1,0 +1,16 @@
+[PASS] GET /health
+[PASS] 合法批次 accepted
+[PASS] 入库 3 条记录
+[PASS] 重复批次 duplicate
+[PASS] 重复不计入
+[PASS] 同号改内容 BATCH_CONTENT_CONFLICT
+[PASS] Merkle 证明可复验
+[PASS] 未知设备 rejected/UNKNOWN_DEVICE
+[PASS] 改值 rejected/INVALID_RECORD_HASH 且定位序号
+[PASS] 伪造签名 rejected/INVALID_SIGNATURE
+[PASS] 审计保留原始批次
+[PASS] 第二批续链 accepted
+[PASS] 累计 5 条记录
+[PASS] 七类设备全部可登记提交
+
+合计 14/14 通过

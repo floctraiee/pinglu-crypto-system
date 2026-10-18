@@ -232,3 +232,35 @@ keys/
 
 # 本地百设备测试密钥
 /keys_100/
+
+# 初始化/清理脚本的备份产物
+backup/
+center_platform/data/init-backup/
+center_platform/data/cleanup-*/
+
+# 验证过程产生的临时目录
+_tmp/
+
+# 实验输出
+docs/evidence/*.tmp
+*.json.tmp
+
+# 一次性修复脚本与临时排查脚本
+_*.py
+fix_db.py
+
+# 根目录旧登记表副本，正本是 test_data/registry_public.json
+/registry_public.json
+
+# 打包与报告大文件
+*.zip
+center_platform/data/
+报告图_初稿/
+报告图_定稿/
+*.docx
+
+# README 本地转存
+/docs/readme-leader-*.md
+
+# 离线交接包
+*.bundle

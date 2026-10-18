@@ -8,85 +8,54 @@
            rejected 记为终态并留证；网络失败、超时、5xx 一律保留待传
   第 9 步  由定时轮询驱动，重启后从数据库恢复，不依赖内存计数
 
-只用标准库（http.client + json），不引入额外依赖。
+只用标准库 urllib，不引入额外依赖。
 
-连接复用
---------
-网关是按批串行转发的（第 7 步要求同设备按序、不抢跑），如果每批都新建 TCP 连接，
-100 台 × 每批一次握手会白吃掉 10 ms/批。所以这里按（主机, 端口）缓存一个
-http.client.HTTPConnection，在同一线程内复用；连接被服务端关闭时自动重连一次。
+为什么【不】做 HTTP 连接复用
+------------------------------
+实测（2026-10-18，对中心 8150 连发 8 次 GET /health）：
+
+    一条连接连发 8 次 : 首次 76.9 ms，后续 61~67 ms
+    每次新建连接      : 平均 26.1 ms
+
+长连接在小请求上反而慢 2.4 倍，是 Nagle 算法 + 延迟 ACK 的典型表现
+（每次多出约 36 ms）。所以这里保持"一批一条短连接"，
+真正的性能优化放在 storage 侧的连接池上。
 """
-import http.client
 import json
 import threading
-from urllib.parse import urlsplit
+import urllib.error
+import urllib.request
 
 from . import config, storage
-
-#: 每个线程一份 HTTP 连接缓存（网关的转发线程只有一个，但测试里可能多线程）
-_HTTP_LOCAL = threading.local()
-
-
-def _reset_connection():
-    conn = getattr(_HTTP_LOCAL, "conn", None)
-    if conn is not None:
-        try:
-            conn.close()
-        except Exception:
-            pass
-    _HTTP_LOCAL.conn = None
-    _HTTP_LOCAL.key = None
-
-
-def _shared_connection(base_url, timeout):
-    """取出（或建立）本线程复用的连接，返回 (conn, 请求路径)。"""
-    parts = urlsplit(base_url)
-    host = parts.hostname
-    port = parts.port or (443 if parts.scheme == "https" else 80)
-    key = (base_url, timeout)
-    conn = getattr(_HTTP_LOCAL, "conn", None)
-    if conn is not None and getattr(_HTTP_LOCAL, "key", None) == key:
-        return conn, parts.path.rstrip("/") + "/batches"
-
-    _reset_connection()
-    conn = http.client.HTTPConnection(host, port, timeout=timeout)
-    _HTTP_LOCAL.conn = conn
-    _HTTP_LOCAL.key = key
-    return conn, parts.path.rstrip("/") + "/batches"
-
-
-def _post_once(conn, path, body):
-    """发一次请求，返回 (status, text)；异常原样抛出。"""
-    conn.request(
-        "POST",
-        path,
-        body=body,
-        headers={"Content-Type": "application/json; charset=utf-8"},
-    )
-    response = conn.getresponse()
-    return response.status, response.read().decode("utf-8")
 
 
 def post_batch(batch, center_url=None, timeout=None):
     """POST {CENTER_URL}/batches，body 必须是 {"batch": <原始批次>}。"""
-    base = (center_url or config.CENTER_URL).rstrip("/")
-    timeout = timeout or config.HTTP_TIMEOUT
+    url = f"{(center_url or config.CENTER_URL).rstrip('/')}/batches"
     body = json.dumps({"batch": batch}, ensure_ascii=False).encode("utf-8")
+    request = urllib.request.Request(
+        url,
+        data=body,
+        method="POST",
+        headers={"Content-Type": "application/json; charset=utf-8"},
+    )
 
     try:
-        conn, path = _shared_connection(base, timeout)
-        status, text = _post_once(conn, path, body)
-    except Exception as exc:  # 连接可能已被服务端按 keep-alive 超时关闭
-        _reset_connection()
+        with urllib.request.urlopen(
+            request, timeout=timeout or config.HTTP_TIMEOUT
+        ) as response:
+            text = response.read().decode("utf-8")
+            status = response.status
+    except urllib.error.HTTPError as exc:
+        detail = ""
         try:
-            conn, path = _shared_connection(base, timeout)
-            status, text = _post_once(conn, path, body)
-        except Exception as exc2:
-            _reset_connection()
-            return {"ok": False, "error": f"{type(exc2).__name__}: {exc2}（首次: {type(exc).__name__}）"}
-
-    if status >= 400:
-        return {"ok": False, "code": status, "error": f"HTTP {status}: {text[:200]}"}
+            detail = exc.read().decode("utf-8", "replace")
+        except Exception:
+            pass
+        return {"ok": False, "code": exc.code,
+                "error": f"HTTP {exc.code}: {detail[:200]}"}
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        return {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
 
     try:
         return {"ok": True, "code": status, "response": json.loads(text)}
@@ -190,19 +159,59 @@ def run_once(center_url=None, timeout=None, max_audit=10, max_per_device=None):
     #
     # 之所以要连发而不是"每设备每轮只发一批"：100 台设备 × 每秒 1 条 ÷ 每批 10 条
     # = 10 批/秒，如果每台每轮只发一批，任何一次积压都要等下一轮才能清，会越堆越多。
-    for device_id in storage.pending_device_ids():
+    #
+    # 并行：设备之间彼此独立（中心按 device_id 分别维护链尾），所以把设备按
+    # FORWARD_SHARDS 分片、每片一个线程并行推进，把"单设备串行"的吞吐放大 N 倍。
+    # 同一设备永远只落在一个分片里，因此设备内部的严格顺序不受影响。
+    devices = storage.pending_device_ids()
+    if devices:
+        shards = max(1, min(config.FORWARD_SHARDS, len(devices)))
+        lock = threading.Lock()
+
+        if shards == 1:
+            _forward_devices(devices, summary, lock, center_url, timeout, max_per_device)
+        else:
+            buckets = [devices[i::shards] for i in range(shards)]
+            failures = []
+
+            def _run(bucket):
+                try:
+                    _forward_devices(bucket, summary, lock, center_url,
+                                     timeout, max_per_device)
+                except Exception as exc:            # 线程里的异常不能静默吞掉
+                    failures.append(exc)
+
+            threads = [threading.Thread(target=_run, args=(bucket,), daemon=True)
+                       for bucket in buckets]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+            if failures:
+                raise failures[0]
+
+    return summary
+
+
+def _forward_devices(device_ids, summary, lock, center_url, timeout, max_per_device):
+    """按给定设备列表顺序推进；每个设备内部严格串行、未确认即停。"""
+    for device_id in device_ids:
         for _ in range(max_per_device):
             row = storage.next_pending(device_id)
             if row is None:
                 break
 
             status, _ = forward_one(row, center_url, timeout)
-            record(status)
+
+            with lock:
+                summary["sent"] += 1
+                if status:
+                    summary[status] = summary.get(status, 0) + 1
+                else:
+                    summary["retry"] += 1
 
             if not status:
                 break       # 这一批还没确认，该设备后面的批次等下一轮
-
-    return summary
 
 
 def run_forever(stop_event, wake_event=None, center_url=None, timeout=None,

@@ -58,6 +58,10 @@ MAX_MESSAGE_BYTES = _env_int("MAX_MESSAGE_BYTES", 1048576)  # 单条 MQTT 消息
 # 一轮转发里同一台设备最多连发几批（串行、按序；遇到未确认的批次就停）。
 # 100 台 × 每秒 1 条 ÷ 每批 10 条 = 10 批/秒，这个值给积压留出清理余量。
 MAX_PER_DEVICE_PER_ROUND = _env_int("MAX_PER_DEVICE_PER_ROUND", 20)
+# 转发并发度：设备按序号取模分片，每片一个线程并行推进。
+# 同一设备永远只落在一个分片里，所以设备内部的严格顺序不受影响。
+# 单设备串行约 5~6 批/秒，8 片即可覆盖 100 台 × 1 条/秒 = 10 批/秒的负载。
+FORWARD_SHARDS = _env_int("FORWARD_SHARDS", 8)
 
 
 def describe():
@@ -75,6 +79,7 @@ def describe():
         "HTTP_TIMEOUT": HTTP_TIMEOUT,
         "MAX_MESSAGE_BYTES": MAX_MESSAGE_BYTES,
         "MAX_PER_DEVICE_PER_ROUND": MAX_PER_DEVICE_PER_ROUND,
+        "FORWARD_SHARDS": FORWARD_SHARDS,
     }
 
 

@@ -60,8 +60,9 @@ MAX_MESSAGE_BYTES = _env_int("MAX_MESSAGE_BYTES", 1048576)  # 单条 MQTT 消息
 MAX_PER_DEVICE_PER_ROUND = _env_int("MAX_PER_DEVICE_PER_ROUND", 20)
 # 转发并发度：设备按序号取模分片，每片一个线程并行推进。
 # 同一设备永远只落在一个分片里，所以设备内部的严格顺序不受影响。
-# 单设备串行约 5~6 批/秒，8 片即可覆盖 100 台 × 1 条/秒 = 10 批/秒的负载。
-FORWARD_SHARDS = _env_int("FORWARD_SHARDS", 8)
+# 100 台设备 / 24 片 ≈ 4~5 台/worker，单 worker 一轮只处理 4~5 批，
+# 队尾等待 ≈ 4~5 × 单批耗时，不会超过 1 秒。
+FORWARD_SHARDS = _env_int("FORWARD_SHARDS", 24)
 
 
 def describe():

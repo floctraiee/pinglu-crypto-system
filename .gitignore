@@ -277,3 +277,5 @@ center_platform/data/
 *.bundle
 >>>>>>> origin/main
 /tests/anomaly_samples/
+/edge_gateway/data/gateway_status.json
+/edge_gateway/data/gateway_status.json.tmp

@@ -11,8 +11,8 @@
 
 当前使用以WL-001身份重新生成并签名的样例，其密钥沿用已验证的原WL-900密钥。
 
-- 正常批次:`test_data/verified_wl001/normal_batch.json`
-- 配套公开登记表:`test_data/verified_wl001/registry_public.json`
+- 正常批次:`test_data/verified_w001/normal_batch.json`
+- 配套公开登记表:`test_data/verified_w001/registry_public.json.`
 
 上述两个公开文件随仓库提供，可用于本地验签复现。
 私钥和模拟器状态数据库不随仓库提供。
@@ -29,9 +29,6 @@ python -m device_simulator.publish --batch-file .\test_data\verified_wl001\norma
 主题为pinglu/batches/WL-001。
 
 dry-run不连接Broker、不发送消息，显示未连接Broker属于预期行为。
-
-运行前请激活项目虚拟环境；Windows也可将命令开头的
-python 替换为 .\.venv\Scripts\python.exe。
 
 ### MQTT发布
 
@@ -158,7 +155,8 @@ MQTT PUBACK只表示Broker已确认接收。
 
 | 测试文件 | 覆盖内容 |
 |---|---|
-| `tests/test_crypto.py` | 规范化编码、SM3 摘要链、Merkle、SM2 验签 |
+| `tests/test_crypto.py` | 规范化编码、SM
+3 摘要链、Merkle、SM2 验签 |
 | `tests/test_device_runner.py` | 多设备生成与重启续链 |
 | `tests/test_contract_integration.py` | 中心接口与契约校验（17 例） |
 | `tests/test_tamper.py` | 6 类篡改的检测率 / 定位准确率 / 误报率 |

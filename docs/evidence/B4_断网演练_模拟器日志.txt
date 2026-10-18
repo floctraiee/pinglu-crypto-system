@@ -1,0 +1,43 @@
+已加载 7 台固定测试设备；rate=1.0 条/设备/秒，批间隔=10 秒
+已生成并保存 DR-001 DR-001-000007 seq 61~70，MQTT=pending，中心=not_requested
+已生成并保存 LK-001 LK-001-000007 seq 61~70，MQTT=pending，中心=not_requested
+已生成并保存 NM-001 NM-001-000007 seq 61~70，MQTT=pending，中心=not_requested
+已生成并保存 SB-001 SB-001-000007 seq 61~70，MQTT=pending，中心=not_requested
+已生成并保存 SL-001 SL-001-000007 seq 61~70，MQTT=pending，中心=not_requested
+已生成并保存 WE-001 WE-001-000007 seq 61~70，MQTT=pending，中心=not_requested
+已生成并保存 WL-001 WL-001-000007 seq 61~70，MQTT=pending，中心=not_requested
+MQTT broker_confirmed DR-001 DR-001-000007：1
+MQTT broker_confirmed LK-001 LK-001-000007：1
+MQTT broker_confirmed NM-001 NM-001-000007：1
+MQTT broker_confirmed SB-001 SB-001-000007：1
+MQTT broker_confirmed SL-001 SL-001-000007：1
+MQTT broker_confirmed WE-001 WE-001-000007：1
+MQTT broker_confirmed WL-001 WL-001-000007：1
+已生成并保存 DR-001 DR-001-000008 seq 71~80，MQTT=pending，中心=not_requested
+已生成并保存 LK-001 LK-001-000008 seq 71~80，MQTT=pending，中心=not_requested
+已生成并保存 NM-001 NM-001-000008 seq 71~80，MQTT=pending，中心=not_requested
+已生成并保存 SB-001 SB-001-000008 seq 71~80，MQTT=pending，中心=not_requested
+已生成并保存 SL-001 SL-001-000008 seq 71~80，MQTT=pending，中心=not_requested
+已生成并保存 WE-001 WE-001-000008 seq 71~80，MQTT=pending，中心=not_requested
+已生成并保存 WL-001 WL-001-000008 seq 71~80，MQTT=pending，中心=not_requested
+MQTT broker_confirmed DR-001 DR-001-000008：1
+MQTT broker_confirmed LK-001 LK-001-000008：1
+MQTT broker_confirmed NM-001 NM-001-000008：1
+MQTT broker_confirmed SB-001 SB-001-000008：1
+MQTT broker_confirmed SL-001 SL-001-000008：1
+MQTT broker_confirmed WE-001 WE-001-000008：1
+MQTT broker_confirmed WL-001 WL-001-000008：1
+已生成并保存 DR-001 DR-001-000009 seq 81~90，MQTT=pending，中心=not_requested
+已生成并保存 LK-001 LK-001-000009 seq 81~90，MQTT=pending，中心=not_requested
+已生成并保存 NM-001 NM-001-000009 seq 81~90，MQTT=pending，中心=not_requested
+已生成并保存 SB-001 SB-001-000009 seq 81~90，MQTT=pending，中心=not_requested
+已生成并保存 SL-001 SL-001-000009 seq 81~90，MQTT=pending，中心=not_requested
+已生成并保存 WE-001 WE-001-000009 seq 81~90，MQTT=pending，中心=not_requested
+已生成并保存 WL-001 WL-001-000009 seq 81~90，MQTT=pending，中心=not_requested
+MQTT broker_confirmed DR-001 DR-001-000009：1
+MQTT broker_confirmed LK-001 LK-001-000009：1
+MQTT broker_confirmed NM-001 NM-001-000009：1
+MQTT broker_confirmed SB-001 SB-001-000009：1
+MQTT broker_confirmed SL-001 SL-001-000009：1
+MQTT broker_confirmed WE-001 WE-001-000009：1
+MQTT broker_confirmed WL-001 WL-001-000009：1

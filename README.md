@@ -33,6 +33,32 @@ dry-run不连接Broker、不发送消息，显示未连接Broker属于预期行�
 运行前请激活项目虚拟环境；Windows也可将命令开头的
 python 替换为 .\.venv\Scripts\python.exe。
 
+### 独立生成设备数据
+
+以下命令创建独立测试目录，生成七类设备各一台、每台三批数据，
+共21批、210条记录。不连接 MQTT，不影响既有联调密钥和数据库。
+
+```powershell
+$runDir = Join-Path $env:TEMP ("pinglu-demo-" + [guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Path $runDir | Out-Null
+
+python -m device_simulator.runner `
+  --devices 7 `
+  --rate 1 `
+  --batch-size 10 `
+  --rounds 3 `
+  --keys-dir "$runDir\keys" `
+  --registry "$runDir\registry_public.json" `
+  --db-path "$runDir\simulator.db"
+
+Write-Host "测试资料目录：$runDir"
+```
+
+预期每台设备生成批次000001～000003，序号分别为1～10、
+11～20、21～30；状态为 MQTT=pending、中心=not_requested。
+
+此目录使用新生成的测试密钥，不能直接替换真实联调的登记表。
+
 ### MQTT发布
 
 先确认B已启动网关、加载配套公开登记表，并核实Broker当前IP。
@@ -48,13 +74,16 @@ MQTT PUBACK只表示Broker已确认接收。
 
 ### 已验证结果
 
-- 修改后全套测试：32 passed、14 subtests passed，3条弃用警告。
+- 当前合并版本全套测试：45 passed、14 subtests passed，3条警告。
 - 单设备重启续链：4批、40条记录检查通过。
-- 100台设备三轮本地测试：300批、3000条记录。
-- 上述100台测试的批次校验、记录摘要和跨批次摘要链检查全部通过。
-- 已完成一次真实三端联调。
+- 100台设备三轮本地测试：300批、3000条记录，
+  批次校验、记录摘要和跨批次摘要链检查全部通过。
+- 正式WL-001样例已完成真实三端联调。
+- 另一次百设备真实短测中，300批获得Broker确认，
+  中心接受300批、保存3000条记录。
 
-100台三轮测试未发送MQTT，不代表已完成100台运行30分钟、
-真实断网恢复补传或端到端P95延迟测试。
+本地校验、真实短测和30分钟性能验收属于不同验证。
+目前尚未确认百设备连续30分钟测试达标；P95延迟指标尚未达标，
+不能将已有功能测试结果表述为性能验收通过。
 
 更详细的A端验证记录见 `docs/a_crypto_simulation_notes.md`。

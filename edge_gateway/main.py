@@ -15,6 +15,7 @@ import argparse
 import json
 import queue
 import threading
+import zlib
 
 import paho.mqtt.client as mqtt
 
@@ -25,12 +26,17 @@ class Gateway:
     """接收队列 + 工作线程 + 转发线程。"""
 
     def __init__(self, center_url=None, http_timeout=None,
-                 forward_interval=None, queue_size=1000):
+                 forward_interval=None, queue_size=1000, workers=None):
         self.center_url = center_url
         self.http_timeout = http_timeout
         self.forward_interval = forward_interval
 
-        self.inbox = queue.Queue(maxsize=queue_size)
+        # 接收侧按设备分片并行：单线程处理一条约 30 ms（SM2 验签占 27 ms），
+        # 100 条就要 3 秒，一轮的批次会被拖成"到得很慢"。
+        # 分片用 topic 里的 device_id 做 crc32，同一台设备永远进同一个队列，
+        # 因而链尾推进的先后关系不受影响。
+        self.workers = max(1, workers if workers is not None else config.RECV_WORKERS)
+        self.inboxes = [queue.Queue(maxsize=queue_size) for _ in range(self.workers)]
         self.stop_event = threading.Event()
         # 每入库一批就 set 一次，转发线程立刻醒来发送，不必等 RETRY_INTERVAL，
         # 实时延迟才能压到 1 秒以内（方案第七节 3 的 P95 要求）。
@@ -49,26 +55,33 @@ class Gateway:
 
     # ------------------------------------------------------------ 接收
 
+    def _inbox_for(self, topic):
+        """按 topic 末段的 device_id 选分片；同一设备恒定落同一个队列。"""
+        device_id = (topic or "").rsplit("/", 1)[-1]
+        index = zlib.crc32(device_id.encode("utf-8")) % self.workers
+        return self.inboxes[index]
+
     def enqueue(self, topic, payload):
         """九步第 1 步：记下接收时间并快速入队。这里不做任何 IO。"""
         received_at = storage.now_iso()
         self.stats["received"] += 1
 
+        inbox = self._inbox_for(topic)
         try:
-            self.inbox.put_nowait((topic, payload, received_at))
+            inbox.put_nowait((topic, payload, received_at))
         except queue.Full:
             self.stats["dropped"] += 1
             storage.save_audit(
                 "queue_full", topic=topic,
-                detail=f"内存队列已满（{self.inbox.maxsize}），该消息被丢弃",
+                detail=f"内存队列已满（{inbox.maxsize}），该消息被丢弃",
                 gateway_received_at=received_at,
             )
             print("[队列] 内存队列已满，丢弃一条消息")
 
-    def _worker(self):
+    def _worker(self, inbox):
         while not self.stop_event.is_set():
             try:
-                topic, payload, received_at = self.inbox.get(timeout=0.5)
+                topic, payload, received_at = inbox.get(timeout=0.5)
             except queue.Empty:
                 continue
 
@@ -83,7 +96,7 @@ class Gateway:
                 )
                 print(f"[异常] 处理消息出错：{type(exc).__name__}: {exc}")
             finally:
-                self.inbox.task_done()
+                inbox.task_done()
 
     def handle(self, topic, payload, received_at):
         """九步第 2、3、4、5、6 步。"""
@@ -166,17 +179,21 @@ class Gateway:
     # ------------------------------------------------------------ 线程
 
     def start(self):
-        worker = threading.Thread(target=self._worker,
-                                  name="gateway-worker", daemon=True)
+        workers = [
+            threading.Thread(target=self._worker, args=(inbox,),
+                             name=f"gateway-worker-{i}", daemon=True)
+            for i, inbox in enumerate(self.inboxes)
+        ]
         forwarder = threading.Thread(
             target=forward.run_forever,
             args=(self.stop_event, self.wake_event, self.center_url,
                   self.http_timeout, self.forward_interval),
             name="gateway-forward", daemon=True,
         )
-        worker.start()
+        for worker in workers:
+            worker.start()
         forwarder.start()
-        self.threads = [worker, forwarder]
+        self.threads = workers + [forwarder]
 
     def stop(self):
         self.stop_event.set()

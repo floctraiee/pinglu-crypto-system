@@ -63,6 +63,11 @@ MAX_PER_DEVICE_PER_ROUND = _env_int("MAX_PER_DEVICE_PER_ROUND", 20)
 # 100 台设备 / 24 片 ≈ 4~5 台/worker，单 worker 一轮只处理 4~5 批，
 # 队尾等待 ≈ 4~5 × 单批耗时，不会超过 1 秒。
 FORWARD_SHARDS = _env_int("FORWARD_SHARDS", 24)
+# 接收侧并发度：解析 + SM2 初验 + 落库 按设备分片并行。
+# 单线程处理一条约 30 ms（其中 SM2 验签约 27 ms），100 条就 3 秒——
+# 这就是"一轮的批次到得很慢"的真正原因。按设备分片后，每台设备仍只由一个
+# 工作线程处理，链尾推进的先后关系不受影响。
+RECV_WORKERS = _env_int("RECV_WORKERS", 8)
 
 
 def describe():
@@ -81,6 +86,7 @@ def describe():
         "MAX_MESSAGE_BYTES": MAX_MESSAGE_BYTES,
         "MAX_PER_DEVICE_PER_ROUND": MAX_PER_DEVICE_PER_ROUND,
         "FORWARD_SHARDS": FORWARD_SHARDS,
+        "RECV_WORKERS": RECV_WORKERS,
     }
 
 
